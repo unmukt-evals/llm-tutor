@@ -55,7 +55,17 @@ export function parseModule(raw: string): Module {
   if (operator !== undefined) passes.operator = operator;
 
   const anchorsText = sections.get('Anchor scenarios');
-  const anchors = anchorsText ? [anchorsText] : [];
+  let anchors: string[];
+  if (!anchorsText) {
+    anchors = [];
+  } else {
+    const listMarker = /^\s*(?:\d+\.|[-*])\s+/;
+    const listItems = anchorsText
+      .split('\n')
+      .filter((line) => listMarker.test(line))
+      .map((line) => line.replace(listMarker, '').trim());
+    anchors = listItems.length > 0 ? listItems : [anchorsText.trim()];
+  }
 
   return {
     id,

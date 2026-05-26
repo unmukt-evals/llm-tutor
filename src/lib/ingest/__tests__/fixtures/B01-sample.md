@@ -14,8 +14,8 @@ If your harness is wrong, every score downstream is a confident lie.
 
 ## Anchor scenarios
 
-You ship a model and the eval says 92%; production says 60%.
-The board asks why the number moved.
+1. You ship a model and the eval says 92%; production says 60%.
+2. The board asks why the number moved.
 
 ### 10-year-old pass
 

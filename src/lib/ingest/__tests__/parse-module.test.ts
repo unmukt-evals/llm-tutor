@@ -46,9 +46,18 @@ describe('parseModule — passes, anchors, lab spec', () => {
     expect(mod.passes.operator).toContain('defend the harness to an auditor');
   });
 
-  it('captures anchors as a non-empty entry', () => {
-    expect(mod.anchors.length).toBe(1);
+  it('captures anchors as per-item list (2 items, markers stripped)', () => {
+    expect(mod.anchors.length).toBe(2);
     expect(mod.anchors[0]).toContain('the eval says 92%');
+    expect(mod.anchors[1]).toContain('The board asks why the number moved');
+  });
+
+  it('prose anchors section (no list markers) → length 1', () => {
+    const prose = parseModule(
+      '---\nmodule_id: Z01\ntrack: A\nname: Z\n---\n\n## Anchor scenarios\n\nSome prose anchor text here.\n',
+    );
+    expect(prose.anchors.length).toBe(1);
+    expect(prose.anchors[0]).toContain('Some prose anchor text here.');
   });
 
   it('captures the lab spec text', () => {
