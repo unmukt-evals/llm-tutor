@@ -1,0 +1,5 @@
+node_modules/
+.next/
+.env.local
+# app-owned learner state lives in the curriculum dir, not here
+
