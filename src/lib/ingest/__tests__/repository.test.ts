@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CurriculumRepositoryImpl } from '@/lib/ingest/repository';
 import { getCurriculumRepository } from '@/lib/ingest';
+import * as parseModuleModule from '@/lib/ingest/parse-module';
 
 let dir: string;
 
@@ -89,5 +90,58 @@ describe('CurriculumRepository.load', () => {
     const curr = await repo.load(dir);
     expect(curr.modules.map((m) => m.id)).toEqual(['B01', 'M01']);
     expect(curr.tracks).toEqual(['A', 'B']);
+  });
+});
+
+describe('CurriculumRepository.load – per-file error isolation', () => {
+  let isoDir: string;
+
+  beforeAll(async () => {
+    isoDir = await mkdtemp(join(tmpdir(), 'llmtutor-iso-'));
+    await writeFile(join(isoDir, 'M01-tokens.md'), MOD_A, 'utf8');
+    await writeFile(join(isoDir, 'BAD-broken.md'), MOD_B, 'utf8');
+  });
+
+  afterAll(async () => {
+    await rm(isoDir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it('skips a file whose parseModule throws, loads remaining valid modules, and does not reject', async () => {
+    // Spy on parseModule so that the call for BAD-broken.md throws.
+    const spy = vi.spyOn(parseModuleModule, 'parseModule').mockImplementation((raw) => {
+      // The real parseModule is called for both files; throw only for the bad one.
+      // We detect the bad file by its content matching MOD_B (which has "B01").
+      if (raw.includes('B01')) {
+        throw new Error('simulated parse failure');
+      }
+      return vi.mocked(parseModuleModule.parseModule).getMockImplementation()!.call(null, raw);
+    });
+
+    // Re-spy without recursion: use the real implementation for the good file.
+    spy.mockRestore();
+    const realParseModule = (await import('@/lib/ingest/parse-module')).parseModule;
+    vi.spyOn(parseModuleModule, 'parseModule').mockImplementation((raw) => {
+      if (raw.includes('B01')) throw new Error('simulated parse failure');
+      return realParseModule(raw);
+    });
+
+    const repo = new CurriculumRepositoryImpl();
+    const curr = await expect(repo.load(isoDir)).resolves.toBeDefined();
+    void curr; // suppress unused warning — resolves assertion is sufficient
+  });
+
+  it('valid module is present and bad module is absent after parse error', async () => {
+    const realParseModule = (await import('@/lib/ingest/parse-module')).parseModule;
+    vi.spyOn(parseModuleModule, 'parseModule').mockImplementation((raw) => {
+      if (raw.includes('B01')) throw new Error('simulated parse failure');
+      return realParseModule(raw);
+    });
+
+    const repo = new CurriculumRepositoryImpl();
+    const curr = await repo.load(isoDir);
+    const ids = curr.modules.map((m) => m.id);
+    expect(ids).toContain('M01');
+    expect(ids).not.toContain('B01');
   });
 });

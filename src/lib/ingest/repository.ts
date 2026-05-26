@@ -28,10 +28,14 @@ export class CurriculumRepositoryImpl implements CurriculumRepository {
 
     const modules: Module[] = [];
     for (const name of files) {
-      const raw = await readFile(join(dir, name), 'utf8');
-      const mod = parseModule(raw);
-      // skip any .md file that has no module_id in frontmatter (e.g. README.md)
-      if (mod.id) modules.push(mod);
+      try {
+        const raw = await readFile(join(dir, name), 'utf8');
+        const mod = parseModule(raw);
+        // skip any .md file that has no module_id in frontmatter (e.g. README.md)
+        if (mod.id) modules.push(mod);
+      } catch (err) {
+        console.warn(`[curriculum] skipping ${name}: ${err instanceof Error ? err.message : err}`);
+      }
     }
     return makeCurriculum(modules);
   }
