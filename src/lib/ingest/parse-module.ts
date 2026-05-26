@@ -1,5 +1,5 @@
 import matter from 'gray-matter';
-import type { Diagram, Module, TrackId } from '@/lib/types';
+import type { Diagram, Drill, Module, TrackId } from '@/lib/types';
 
 /**
  * Split markdown body into a map keyed by exact heading text (without the `#`s).
@@ -73,6 +73,30 @@ function extractDiagrams(passText: string | undefined): Diagram[] {
   return out;
 }
 
+/**
+ * Parse "### Drill N" sections from the sections map.
+ * Each drill block contains "Scenario:", optional "DC1:", optional "DC2:" lines.
+ */
+function parseDrills(sections: Map<string, string>): Drill[] {
+  const drills: Drill[] = [];
+  for (const [heading, text] of sections) {
+    if (!/^Drill\b/i.test(heading)) continue;
+    const grab = (label: string): string | undefined => {
+      const re = new RegExp(`^${label}:\\s*(.*)$`, 'im');
+      const match = re.exec(text);
+      return match ? match[1].trim() : undefined;
+    };
+    const scenario = grab('Scenario') ?? '';
+    const drill: Drill = { scenario };
+    const dc1 = grab('DC1');
+    const dc2 = grab('DC2');
+    if (dc1 !== undefined) drill.dc1 = dc1;
+    if (dc2 !== undefined) drill.dc2 = dc2;
+    drills.push(drill);
+  }
+  return drills;
+}
+
 function asStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x));
   if (v === undefined || v === null) return [];
@@ -119,7 +143,7 @@ export function parseModule(raw: string): Module {
     passes,
     diagrams: extractDiagrams(passes.engineer),
     labSpec: sections.get('Lab spec'),
-    drills: [],
+    drills: parseDrills(sections),
     stressTests: [],
     flashcardSeeds: [],
     sources: [],

@@ -132,3 +132,28 @@ describe('parseModule — diagram extraction', () => {
     expect(noPass.diagrams).toEqual([]);
   });
 });
+
+describe('parseModule — application drills', () => {
+  let mod: Module;
+  beforeAll(async () => {
+    mod = parseModule(await readFile(FIXTURE, 'utf8'));
+  });
+
+  it('parses two drills with scenario + double-clicks', () => {
+    expect(mod.drills.length).toBe(2);
+    expect(mod.drills[0].scenario).toContain('eval set leaked into training');
+    expect(mod.drills[0].dc1).toContain('Distinguish contamination');
+    expect(mod.drills[0].dc2).toContain('contamination probe');
+  });
+
+  it('handles a drill with only dc1 (dc2 undefined)', () => {
+    expect(mod.drills[1].scenario).toContain('Two runs of the same model');
+    expect(mod.drills[1].dc1).toContain('three nondeterminism sources');
+    expect(mod.drills[1].dc2).toBeUndefined();
+  });
+
+  it('returns no drills when the section is absent', () => {
+    const noDrills = parseModule('---\nmodule_id: D01\ntrack: A\nname: D\n---\n\n## Sources\n- S1\n');
+    expect(noDrills.drills).toEqual([]);
+  });
+});
