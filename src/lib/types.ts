@@ -94,12 +94,12 @@ export interface AssessmentSpec {
 // §7 final signature (replaces §3): rng defaults to Math.random so tests are deterministic.
 // selection: stratified, representation-guaranteed (build-spec §3.2) — guarantees ≥1 easy,
 // ≥1 medium, ≥1 hard and ≥3 distinct dimensions; excludes recently-correct (anti-farm).
-export declare function selectAssessment(
+export type SelectAssessment = (
   pool: MCQPool,
   state: ModuleState,
   spec: AssessmentSpec,
   rng?: () => number,
-): MCQQuestion[];
+) => MCQQuestion[];
 
 export interface MCQAnswer {
   questionId: string;
@@ -123,18 +123,18 @@ export interface Diagnosis {
 }
 
 // the engine (all pure functions over matrix + answers — deterministic, testable)
-export declare function updateMatrix(
+export type UpdateMatrix = (
   m: PerformanceMatrix,
   a: MCQAnswer,
   q: MCQQuestion,
-): PerformanceMatrix;
-export declare function detectInconsistency(m: PerformanceMatrix): boolean; // build-spec §3.4
-export declare function localize(
+) => PerformanceMatrix;
+export type DetectInconsistency = (m: PerformanceMatrix) => boolean; // build-spec §3.4
+export type Localize = (
   m: PerformanceMatrix,
   log: ChosenDistractor[],
   pool: MCQPool,
-): Diagnosis; // §3.5
-export declare function profileFromMatrix(m: PerformanceMatrix): DimensionProfile;
+) => Diagnosis; // §3.5
+export type ProfileFromMatrix = (m: PerformanceMatrix) => DimensionProfile;
 
 // ── §5 Sidecar state (S-STATE — SINGLE SOURCE OF TRUTH) ──────────────────────
 export type Mastery = 'blank' | 'fuzzy' | 'solid' | 'verified';
@@ -149,7 +149,7 @@ export interface ModuleState {
     recentCorrect: { qid: string; at: string }[]; // §7: anti-farm source (prune > N=3 sessions)
     openDiagnosis?: Diagnosis & { openedAt: string };
   };
-  stressTest: Partial<Record<'board' | 'researcher' | 'analyst', 'passed' | 'not_yet' | 'untested'>>;
+  stressTest: Partial<Record<StressTest['lens'], 'passed' | 'not_yet' | 'untested'>>;
 }
 
 export interface FlashcardState {
@@ -180,18 +180,18 @@ export interface StateStore {
 //   solid→verified: m.mcq.matrix.hard[dim]?.correct >= 1 for EVERY dim
 //                   AND all three stressTest lenses === 'passed'
 //   any openDiagnosis blocks advancement past 'fuzzy'.
-export declare function nextMastery(
+export type NextMastery = (
   prev: Mastery,
   m: ModuleState,
   readPasses: DepthPass[],
   drillAdequate: boolean,
-): Mastery;
+) => Mastery;
 
 // ── Spaced repetition helpers (pure functions; §7 — src/lib/state/sr.ts) ─────
 // Card resurfaces when now - lastTested ≥ intervalDays. Correct recall advances
 // interval 7→14→30 (caps at 30) and holds mastery; a miss resets to 7.
-export declare function isCardDue(card: FlashcardState, now: Date): boolean;
-export declare function nextSrInterval(
+export type IsCardDue = (card: FlashcardState, now: Date) => boolean;
+export type NextSrInterval = (
   card: FlashcardState,
   recall: 'again' | 'good',
-): FlashcardState;
+) => FlashcardState;

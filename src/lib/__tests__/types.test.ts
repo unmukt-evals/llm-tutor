@@ -26,14 +26,14 @@ import type {
   FlashcardState,
   TutorState,
   StateStore,
-  selectAssessment,
-  updateMatrix,
-  detectInconsistency,
-  localize,
-  profileFromMatrix,
-  nextMastery,
-  isCardDue,
-  nextSrInterval,
+  SelectAssessment,
+  UpdateMatrix,
+  DetectInconsistency,
+  Localize,
+  ProfileFromMatrix,
+  NextMastery,
+  IsCardDue,
+  NextSrInterval,
 } from '@/lib/types';
 
 describe('shared types', () => {
@@ -123,7 +123,7 @@ describe('shared types', () => {
 
     type _SelectOK = Expect<
       Equal<
-        typeof selectAssessment,
+        SelectAssessment,
         (
           pool: MCQPool,
           state: ModuleState,
@@ -133,25 +133,25 @@ describe('shared types', () => {
       >
     >;
     type _UpdateOK = Expect<
-      Equal<typeof updateMatrix, (m: PerformanceMatrix, a: MCQAnswer, q: MCQQuestion) => PerformanceMatrix>
+      Equal<UpdateMatrix, (m: PerformanceMatrix, a: MCQAnswer, q: MCQQuestion) => PerformanceMatrix>
     >;
-    type _DetectOK = Expect<Equal<typeof detectInconsistency, (m: PerformanceMatrix) => boolean>>;
+    type _DetectOK = Expect<Equal<DetectInconsistency, (m: PerformanceMatrix) => boolean>>;
     type _LocalizeOK = Expect<
-      Equal<typeof localize, (m: PerformanceMatrix, log: ChosenDistractor[], pool: MCQPool) => Diagnosis>
+      Equal<Localize, (m: PerformanceMatrix, log: ChosenDistractor[], pool: MCQPool) => Diagnosis>
     >;
     type _ProfileOK = Expect<
-      Equal<typeof profileFromMatrix, (m: PerformanceMatrix) => DimensionProfile>
+      Equal<ProfileFromMatrix, (m: PerformanceMatrix) => DimensionProfile>
     >;
     // §7 final signature: gains the drillAdequate boolean
     type _NextOK = Expect<
       Equal<
-        typeof nextMastery,
+        NextMastery,
         (prev: Mastery, m: ModuleState, readPasses: DepthPass[], drillAdequate: boolean) => Mastery
       >
     >;
-    type _DueOK = Expect<Equal<typeof isCardDue, (card: FlashcardState, now: Date) => boolean>>;
+    type _DueOK = Expect<Equal<IsCardDue, (card: FlashcardState, now: Date) => boolean>>;
     type _SrOK = Expect<
-      Equal<typeof nextSrInterval, (card: FlashcardState, recall: 'again' | 'good') => FlashcardState>
+      Equal<NextSrInterval, (card: FlashcardState, recall: 'again' | 'good') => FlashcardState>
     >;
 
     // Force the type aliases to be "used" so tsc keeps them in scope.
