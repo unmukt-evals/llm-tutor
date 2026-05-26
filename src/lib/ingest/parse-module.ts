@@ -1,5 +1,5 @@
 import matter from 'gray-matter';
-import type { Diagram, Drill, Module, TrackId } from '@/lib/types';
+import type { Diagram, Drill, Module, StressTest, TrackId } from '@/lib/types';
 
 /**
  * Split markdown body into a map keyed by exact heading text (without the `#`s).
@@ -97,6 +97,35 @@ function parseDrills(sections: Map<string, string>): Drill[] {
   return drills;
 }
 
+/**
+ * Parse "## Stress-test pool" section lines into StressTest objects.
+ * Each line is: `- board: <question>` (lens ∈ board|researcher|analyst).
+ */
+function parseStressTests(section: string | undefined): StressTest[] {
+  if (!section) return [];
+  const out: StressTest[] = [];
+  for (const raw of section.split('\n')) {
+    const line = raw.replace(/^\s*[-*]\s*/, '').trim();
+    const match = /^(board|researcher|analyst):\s*(.*)$/i.exec(line);
+    if (match) {
+      out.push({ lens: match[1].toLowerCase() as StressTest['lens'], question: match[2].trim() });
+    }
+  }
+  return out;
+}
+
+/**
+ * Parse a bullet-list section (e.g. "## Flashcard seeds", "## Sources") into
+ * a plain string array with leading list markers stripped.
+ */
+function parseBulletLines(section: string | undefined): string[] {
+  if (!section) return [];
+  return section
+    .split('\n')
+    .map((l) => l.replace(/^\s*[-*]\s*/, '').trim())
+    .filter((l) => l.length > 0);
+}
+
 function asStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x));
   if (v === undefined || v === null) return [];
@@ -144,8 +173,8 @@ export function parseModule(raw: string): Module {
     diagrams: extractDiagrams(passes.engineer),
     labSpec: sections.get('Lab spec'),
     drills: parseDrills(sections),
-    stressTests: [],
-    flashcardSeeds: [],
-    sources: [],
+    stressTests: parseStressTests(sections.get('Stress-test pool')),
+    flashcardSeeds: parseBulletLines(sections.get('Flashcard seeds')),
+    sources: parseBulletLines(sections.get('Sources')),
   };
 }

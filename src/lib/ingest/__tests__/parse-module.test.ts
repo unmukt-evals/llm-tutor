@@ -157,3 +157,34 @@ describe('parseModule — application drills', () => {
     expect(noDrills.drills).toEqual([]);
   });
 });
+
+describe('parseModule — stress tests, flashcards, sources', () => {
+  let mod: Module;
+  beforeAll(async () => {
+    mod = parseModule(await readFile(FIXTURE, 'utf8'));
+  });
+
+  it('parses three stress-test lenses', () => {
+    expect(mod.stressTests.length).toBe(3);
+    expect(mod.stressTests.map((s) => s.lens)).toEqual(['board', 'researcher', 'analyst']);
+    expect(mod.stressTests[0].question).toContain('decision-grade');
+    expect(mod.stressTests[2].question).toContain('production number');
+  });
+
+  it('parses flashcard seeds as lines', () => {
+    expect(mod.flashcardSeeds.length).toBe(2);
+    expect(mod.flashcardSeeds[0]).toContain('What makes an eval');
+  });
+
+  it('parses sources as lines', () => {
+    expect(mod.sources.length).toBe(2);
+    expect(mod.sources[0]).toContain('S4 — Construct validity');
+  });
+
+  it('returns empty arrays when those sections are absent', () => {
+    const bare = parseModule('---\nmodule_id: E01\ntrack: A\nname: E\n---\n\n## Why this matters\nx\n');
+    expect(bare.stressTests).toEqual([]);
+    expect(bare.flashcardSeeds).toEqual([]);
+    expect(bare.sources).toEqual([]);
+  });
+});
