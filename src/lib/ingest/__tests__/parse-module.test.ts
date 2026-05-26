@@ -33,3 +33,35 @@ describe('parseModule — identity + whyThisMatters', () => {
     expect(noWhy.id).toBe('X01');
   });
 });
+
+describe('parseModule — passes, anchors, lab spec', () => {
+  let mod: Module;
+  beforeAll(async () => {
+    mod = parseModule(await readFile(FIXTURE, 'utf8'));
+  });
+
+  it('maps the three depth passes to the canonical keys', () => {
+    expect(mod.passes.tenYearOld).toContain('everyone takes the same test');
+    expect(mod.passes.engineer).toContain('pins prompts, decoding, and scoring');
+    expect(mod.passes.operator).toContain('defend the harness to an auditor');
+  });
+
+  it('captures anchors as a non-empty entry', () => {
+    expect(mod.anchors.length).toBe(1);
+    expect(mod.anchors[0]).toContain('the eval says 92%');
+  });
+
+  it('captures the lab spec text', () => {
+    expect(mod.labSpec).toContain('temperature=0');
+  });
+
+  it('leaves passes undefined when a pass heading is absent', () => {
+    const partial = parseModule(
+      '---\nmodule_id: Y01\ntrack: A\nname: Y\n---\n\n### Engineer pass\nonly engineer here\n',
+    );
+    expect(partial.passes.engineer).toBe('only engineer here');
+    expect(partial.passes.tenYearOld).toBeUndefined();
+    expect(partial.passes.operator).toBeUndefined();
+    expect(partial.labSpec).toBeUndefined();
+  });
+});
