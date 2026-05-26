@@ -1,5 +1,5 @@
 import matter from 'gray-matter';
-import type { Module, TrackId } from '@/lib/types';
+import type { Diagram, Module, TrackId } from '@/lib/types';
 
 /**
  * Split markdown body into a map keyed by exact heading text (without the `#`s).
@@ -30,6 +30,47 @@ function sectionsByHeading(body: string): Map<string, string> {
   }
   flush();
   return sections;
+}
+
+/**
+ * Extract fenced code blocks from a pass body and return them as Diagram objects.
+ * - Opening fence language tag determines `kind`:
+ *   - `mermaid` → 'mermaid'
+ *   - `text` | `ascii` | (empty) → 'ascii'
+ *   - any other language (e.g. `python`, `ts`) → 'code'
+ * - `body` = inner text only (fences + language tag stripped, trimmed).
+ */
+function extractDiagrams(passText: string | undefined): Diagram[] {
+  if (!passText) return [];
+  const out: Diagram[] = [];
+  const lines = passText.split('\n');
+  let inFence = false;
+  let currentKind: Diagram['kind'] = 'ascii';
+  let buffer: string[] = [];
+
+  for (const line of lines) {
+    const fence = /^```(\w*)\s*$/.exec(line.trimStart());
+    if (fence) {
+      if (!inFence) {
+        const lang = fence[1].toLowerCase();
+        if (lang === 'mermaid') {
+          currentKind = 'mermaid';
+        } else if (lang === '' || lang === 'text' || lang === 'ascii') {
+          currentKind = 'ascii';
+        } else {
+          currentKind = 'code';
+        }
+        inFence = true;
+        buffer = [];
+      } else {
+        out.push({ kind: currentKind, body: buffer.join('\n').trim() });
+        inFence = false;
+      }
+      continue;
+    }
+    if (inFence) buffer.push(line);
+  }
+  return out;
 }
 
 function asStringArray(v: unknown): string[] {
@@ -76,7 +117,7 @@ export function parseModule(raw: string): Module {
     whyThisMatters: sections.get('Why this matters') ?? '',
     anchors,
     passes,
-    diagrams: [],
+    diagrams: extractDiagrams(passes.engineer),
     labSpec: sections.get('Lab spec'),
     drills: [],
     stressTests: [],

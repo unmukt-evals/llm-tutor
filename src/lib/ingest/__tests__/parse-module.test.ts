@@ -74,3 +74,61 @@ describe('parseModule — passes, anchors, lab spec', () => {
     expect(partial.labSpec).toBeUndefined();
   });
 });
+
+describe('parseModule — diagram extraction', () => {
+  let mod: Module;
+  beforeAll(async () => {
+    mod = parseModule(await readFile(FIXTURE, 'utf8'));
+  });
+
+  it('extracts both fenced blocks from the engineer pass as Diagram objects', () => {
+    expect(mod.diagrams.length).toBe(2);
+  });
+
+  it('first block: kind is mermaid, body contains the graph content, no backticks or lang tag', () => {
+    const d = mod.diagrams[0];
+    expect(d.kind).toBe('mermaid');
+    expect(d.body).toContain('graph TD');
+    expect(d.body).toContain('Prompt --> Decode --> Score');
+    expect(d.body).not.toContain('```');
+    expect(d.body).not.toContain('mermaid');
+  });
+
+  it('second block: kind is ascii, body contains the ascii content, no backticks or lang tag', () => {
+    const d = mod.diagrams[1];
+    expect(d.kind).toBe('ascii');
+    expect(d.body).toContain('[prompt] -> [decode] -> [score]');
+    expect(d.body).not.toContain('```');
+    expect(d.body).not.toContain('text');
+  });
+
+  it('infers kind:code for a non-mermaid non-ascii language tag', () => {
+    const withCode = parseModule(
+      '---\nmodule_id: K01\ntrack: A\nname: K\n---\n\n### Engineer pass\n```python\nx = 1\n```\n',
+    );
+    expect(withCode.diagrams.length).toBe(1);
+    expect(withCode.diagrams[0].kind).toBe('code');
+    expect(withCode.diagrams[0].body).toBe('x = 1');
+  });
+
+  it('infers kind:ascii for an empty language tag', () => {
+    const withEmpty = parseModule(
+      '---\nmodule_id: L01\ntrack: A\nname: L\n---\n\n### Engineer pass\n```\nsome ascii\n```\n',
+    );
+    expect(withEmpty.diagrams.length).toBe(1);
+    expect(withEmpty.diagrams[0].kind).toBe('ascii');
+    expect(withEmpty.diagrams[0].body).toBe('some ascii');
+  });
+
+  it('returns no diagrams when the engineer pass has no fenced blocks', () => {
+    const noDiag = parseModule(
+      '---\nmodule_id: Z01\ntrack: A\nname: Z\n---\n\n### Engineer pass\nprose only, no fences\n',
+    );
+    expect(noDiag.diagrams).toEqual([]);
+  });
+
+  it('returns no diagrams when there is no engineer pass', () => {
+    const noPass = parseModule('---\nmodule_id: N01\ntrack: A\nname: N\n---\n\n## Sources\n- S1\n');
+    expect(noPass.diagrams).toEqual([]);
+  });
+});
