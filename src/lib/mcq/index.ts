@@ -10,6 +10,9 @@ export { selectAssessment } from './select';
 export { localize, routeRemediation } from './localize';
 export { gradeAnswer, feedbackFor } from './grade';
 export type { QuestionFeedback } from './grade';
+export {
+  applyDiagnosisToState, buildRemediationAssessment, clearDiagnosisIfResolved, masteryBlockedByWeakDimension,
+} from './remediation';
 
 /**
  * Factory (00-shared-model §7). Pool files live at
