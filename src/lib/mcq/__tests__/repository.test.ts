@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FileMCQRepository, validatePool, getMcqRepository } from '@/lib/mcq';
+import { FileMCQRepository } from '@/lib/mcq/repository';
+import { validatePool, getMcqRepository } from '@/lib/mcq';
 import * as bad from './fixtures/bad-pools';
 import { B99_POOL } from './fixtures/pool';
 

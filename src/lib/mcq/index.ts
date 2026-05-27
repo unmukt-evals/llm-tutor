@@ -1,10 +1,10 @@
 // Barrel re-export of the S-MCQ engine public API.
 import path from 'node:path';
 import type { MCQRepository } from '@/lib/types';
-import { FileMCQRepository } from './repository';
+import { FileMCQRepository } from './repository'; // used by getMcqRepository factory below
 
 // Repository
-export { FileMCQRepository, validatePool } from './repository';
+export { validatePool } from './repository';
 
 // Performance matrix
 export { emptyMatrix, updateMatrix, accuracyByDimension, profileFromMatrix, statusFor } from './matrix';
