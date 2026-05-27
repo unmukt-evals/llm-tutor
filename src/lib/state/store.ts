@@ -1,4 +1,4 @@
-import { readFile, writeFile, rename } from 'node:fs/promises';
+import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StateStore, TutorState, ModuleState } from '@/lib/types';
 import { defaultTutorState, defaultModuleState } from '@/lib/state/defaults';
@@ -31,11 +31,20 @@ export class JsonStateStore implements StateStore {
     }
   }
 
-  // NOTE: minimal working write — Task 15 hardens atomicity guarantees + ".md never touched".
+  // Atomic write: serialize to a temp file on the same filesystem, then rename
+  // over the sidecar (atomic on the same fs). The app NEVER writes any `.md`.
+  // If the rename fails, the temp file is cleaned up so no orphaned `.tmp`
+  // is left behind; the original error is preserved and re-thrown.
   async write(s: TutorState): Promise<void> {
     const tmp = `${this.path}.tmp`;
     await writeFile(tmp, JSON.stringify(s, null, 2), 'utf8');
-    await rename(tmp, this.path);
+    try {
+      await rename(tmp, this.path);
+    } catch (err: unknown) {
+      // Best-effort cleanup of the orphaned temp; don't mask the original error.
+      await unlink(tmp).catch(() => {});
+      throw err;
+    }
   }
 
   async getModule(id: string): Promise<ModuleState> {
