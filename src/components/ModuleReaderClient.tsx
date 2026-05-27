@@ -13,6 +13,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import DepthToggle from '@/components/DepthToggle';
 import DiagramPane from '@/components/DiagramPane';
+import VizBlock from '@/components/viz/VizBlock';
 import { SelfRevealPanel } from '@/components/SelfRevealPanel';
 import {
   DEFAULT_DEPTH,
@@ -53,6 +54,20 @@ export default function ModuleReaderClient({ module, state }: ModuleReaderClient
 
       {/* Diagrams from the module's engineer pass. Returns null when empty. */}
       <DiagramPane diagrams={module.diagrams} />
+
+      {/* Real interactive visualizations declared in the module's "## Visuals"
+          section (V-VIZ). Rendered after the pass body / diagrams; does not
+          affect DiagramPane. Empty visuals → nothing rendered. */}
+      {module.visuals.length > 0 && (
+        <section className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Visualizations
+          </h3>
+          {module.visuals.map((viz, i) => (
+            <VizBlock key={`viz-${i}`} viz={viz} />
+          ))}
+        </section>
+      )}
 
       {/* Practice / self-assess — drills (acknowledge-only) + stress-test pool
           (each lens persists its verdict to ModuleState.stressTest). */}
