@@ -188,3 +188,26 @@ describe('parseModule — stress tests, flashcards, sources', () => {
     expect(bare.sources).toEqual([]);
   });
 });
+
+describe('parseModule — visuals', () => {
+  let mod: Module;
+  beforeAll(async () => {
+    mod = parseModule(await readFile(FIXTURE, 'utf8'));
+  });
+
+  it('parses the Visuals section into Module.visuals', () => {
+    expect(mod.visuals.length).toBe(1);
+    expect(mod.visuals[0].type).toBe('bar-compare');
+    expect(mod.visuals[0].title).toBe('Eval vs production');
+  });
+
+  it('does NOT treat viz blocks as engineer-pass diagrams', () => {
+    // The engineer pass still has exactly its 2 fenced blocks (mermaid + ascii).
+    expect(mod.diagrams.length).toBe(2);
+  });
+
+  it('returns [] visuals when the section is absent (backward-compatible)', () => {
+    const bare = parseModule('---\nmodule_id: V01\ntrack: A\nname: V\n---\n\n## Sources\n- S1\n');
+    expect(bare.visuals).toEqual([]);
+  });
+});

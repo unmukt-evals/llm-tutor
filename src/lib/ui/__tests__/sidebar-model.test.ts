@@ -13,6 +13,7 @@ function mod(id: string, track: 'A' | 'B' | 'C', name: string): Module {
     anchors: [],
     passes: {},
     diagrams: [],
+    visuals: [],
     drills: [],
     stressTests: [],
     flashcardSeeds: [],

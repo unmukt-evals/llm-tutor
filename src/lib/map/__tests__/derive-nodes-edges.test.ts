@@ -14,6 +14,7 @@ function makeModule(overrides: Partial<Module> & { id: string; track: TrackId })
     anchors: overrides.anchors ?? [],
     passes: overrides.passes ?? {},
     diagrams: overrides.diagrams ?? [], // §7: Diagram[] (kind + body), not string[]
+    visuals: overrides.visuals ?? [], // V-VIZ: parsed from the "## Visuals" section
     drills: overrides.drills ?? [],
     stressTests: overrides.stressTests ?? [],
     flashcardSeeds: overrides.flashcardSeeds ?? [],
