@@ -30,8 +30,10 @@ function noWeakDimension(profile: DimensionProfile): boolean {
 /**
  * fuzzy → solid (build-spec §7): all three depth passes read AND a drill
  * self-marked adequate AND the dimensionProfile has no 'weak' dimension.
+ * An open diagnosis blocks advancement past fuzzy (build-spec §7).
  */
 function qualifiesSolid(m: ModuleState, readPasses: DepthPass[], drillAdequate: boolean): boolean {
+  if (m.mcq.openDiagnosis) return false;
   const allPassesRead = ALL_PASSES.every((p) => readPasses.includes(p));
   return allPassesRead && drillAdequate && noWeakDimension(m.mcq.dimensionProfile);
 }
@@ -40,8 +42,10 @@ function qualifiesSolid(m: ModuleState, readPasses: DepthPass[], drillAdequate: 
  * solid → verified (build-spec §7): hard-difficulty MCQs correct in ALL 4
  * dimensions (matrix.hard[dim].correct >= 1 for every dimension) AND all three
  * stress-test lenses self-marked 'passed'.
+ * An open diagnosis blocks advancement past fuzzy (build-spec §7).
  */
 function qualifiesVerified(m: ModuleState): boolean {
+  if (m.mcq.openDiagnosis) return false;
   const hardAllDims = ALL_DIMENSIONS.every((d) => (m.mcq.matrix.hard[d]?.correct ?? 0) >= 1);
   const allLensesPassed = ALL_LENSES.every((l) => m.stressTest[l] === 'passed');
   return hardAllDims && allLensesPassed;

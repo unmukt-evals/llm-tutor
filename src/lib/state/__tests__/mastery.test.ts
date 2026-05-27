@@ -170,6 +170,18 @@ describe('nextMastery — fuzzy → solid', () => {
     };
     expect(nextMastery('fuzzy', ms, allPasses, true)).toBe('solid');
   });
+
+  it('stays fuzzy when openDiagnosis is set even if all other solid conditions are met', () => {
+    const ms = fuzzyReady();
+    ms.mcq.openDiagnosis = {
+      dimension: 'topic',
+      confidence: 0.8,
+      evidence: { qids: [], recurringMisconceptions: [] },
+      remediation: 'drill',
+      openedAt: 'now',
+    };
+    expect(nextMastery('fuzzy', ms, allPasses, true)).toBe('fuzzy');
+  });
 });
 
 describe('nextMastery — solid → verified', () => {
@@ -207,6 +219,18 @@ describe('nextMastery — solid → verified', () => {
   it('stays solid when a stress lens is untested', () => {
     const ms = solidReady();
     ms.stressTest.board = 'untested';
+    expect(nextMastery('solid', ms, [], false)).toBe('solid');
+  });
+
+  it('stays solid when openDiagnosis is set even if all other verified conditions are met', () => {
+    const ms = solidReady();
+    ms.mcq.openDiagnosis = {
+      dimension: 'logic',
+      confidence: 0.9,
+      evidence: { qids: [], recurringMisconceptions: [] },
+      remediation: 'drill',
+      openedAt: 'now',
+    };
     expect(nextMastery('solid', ms, [], false)).toBe('solid');
   });
 });
