@@ -1,18 +1,38 @@
 // Barrel re-export of the S-MCQ engine public API.
-// (Grows as later tasks land matrix / select / localize / etc.)
 import path from 'node:path';
 import type { MCQRepository } from '@/lib/types';
 import { FileMCQRepository } from './repository';
 
+// Repository
 export { FileMCQRepository, validatePool } from './repository';
-export type { FileNamer } from './repository';
-export { selectAssessment } from './select';
+
+// Performance matrix
+export { emptyMatrix, updateMatrix, accuracyByDimension, profileFromMatrix, statusFor } from './matrix';
+
+// Inconsistency detector
+export { detectInconsistency } from './inconsistency';
+
+// Localizer + remediation router
 export { localize, routeRemediation } from './localize';
+
+// Stratified selection
+export { selectAssessment } from './select';
+
+// Grading + feedback
 export { gradeAnswer, feedbackFor } from './grade';
 export type { QuestionFeedback } from './grade';
+
+// Remediation loop
 export {
-  applyDiagnosisToState, buildRemediationAssessment, clearDiagnosisIfResolved, masteryBlockedByWeakDimension,
+  applyDiagnosisToState,
+  buildRemediationAssessment,
+  clearDiagnosisIfResolved,
+  masteryBlockedByWeakDimension,
 } from './remediation';
+
+// S-SELF: self-graded-reveal helpers
+export { revealForDrill, revealForStressTest, applyStressSelfMark } from './self';
+export type { DrillReveal, StressReveal, SelfMark } from './self';
 
 /**
  * Factory (00-shared-model §7). Pool files live at
