@@ -3,13 +3,19 @@
 // Loads curriculum + state server-side; derives nodes/edges; passes
 // pre-computed serializable props to the client JourneyMap + TopBar.
 //
-// dueCount is a placeholder (0) — real due-card counting is wired in Task 7.
+// dueCount is the real count of spaced-repetition cards due today (plan-02
+// Task 7): parse `_flashcards.md` from CURRICULUM_DIR and count via the
+// pure cards logic. A missing deck file is treated as 0 due.
 
+import { readFile } from 'fs/promises';
+import path from 'path';
 import TopBar from '@/components/TopBar';
 import JourneyMap from '@/components/JourneyMap';
 import { deriveNodesEdges } from '@/lib/map/derive-nodes-edges';
 import { getCurriculumRepository } from '@/lib/ingest';
 import { getStateStore } from '@/lib/state';
+import { parseFlashcards } from '@/lib/cards/parse-flashcards';
+import { countDueCards } from '@/lib/cards/due-cards';
 
 export default async function HomePage() {
   const curriculumDir = process.env.CURRICULUM_DIR;
@@ -39,15 +45,18 @@ export default async function HomePage() {
   const repo = getCurriculumRepository();
   const store = getStateStore(curriculumDir);
 
-  const [curriculum, state] = await Promise.all([
+  const flashcardsPath = path.join(curriculumDir, '_flashcards.md');
+  const [curriculum, state, flashcardsRaw] = await Promise.all([
     repo.load(curriculumDir),
     store.read(),
+    // Missing `_flashcards.md` (or any read error) → empty deck → 0 due.
+    readFile(flashcardsPath, 'utf-8').catch(() => ''),
   ]);
 
   const { nodes, edges } = deriveNodesEdges(curriculum, state);
 
-  // Placeholder: real due-card counting lands in Task 7.
-  const dueCount = 0;
+  const flashcards = parseFlashcards(flashcardsRaw);
+  const dueCount = countDueCards(flashcards, state.flashcards);
 
   return (
     <main className="min-h-screen bg-slate-50">
