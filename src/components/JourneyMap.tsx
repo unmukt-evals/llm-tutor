@@ -37,8 +37,8 @@ export default function JourneyMap({
   // MapNode/MapEdge are plain-TS shapes that match React Flow's Node/Edge at
   // runtime (id, position, data, style / id, source, target, style). Cast on
   // the way in so React Flow's hooks can manage local drag state.
-  const [nodes, , onNodesChange] = useNodesState(initialNodes as unknown as Node[]);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges as unknown as Edge[]);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes as Node[]);
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges as Edge[]);
 
   const handleNodeClick = useCallback<NodeMouseHandler>(
     (_event, node) => {

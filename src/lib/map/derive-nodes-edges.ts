@@ -3,6 +3,7 @@
 // No React import, no fetch — plain TS so it is unit-testable with Vitest.
 // The JourneyMap client component renders these as-is; all logic lives here.
 
+import type { CSSProperties } from 'react';
 import type { Curriculum, TutorState, Mastery, TrackId } from '@/lib/types';
 
 export interface MapNode {
@@ -10,7 +11,7 @@ export interface MapNode {
   type?: string;
   position: { x: number; y: number };
   data: { label: string; mastery: Mastery };
-  style?: Record<string, string | number>;
+  style?: CSSProperties;
 }
 
 export interface MapEdge {
@@ -18,7 +19,7 @@ export interface MapEdge {
   source: string;
   target: string;
   type?: string;
-  style?: Record<string, string | number>;
+  style?: CSSProperties;
 }
 
 // Node fill by mastery (build-spec colour tokens).
