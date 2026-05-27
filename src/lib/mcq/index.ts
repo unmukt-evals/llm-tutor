@@ -31,8 +31,8 @@ export {
 } from './remediation';
 
 // S-SELF: self-graded-reveal helpers
-export { revealForDrill, revealForStressTest, applyStressSelfMark } from './self';
-export type { DrillReveal, StressReveal, SelfMark } from './self';
+export { revealForDrill, revealForStressTest, applyStressSelfMark, stressTestPatch } from './self';
+export type { DrillReveal, StressReveal, SelfMark, StressTestPatch } from './self';
 
 // Runner orchestration (pure): per-answer fold + end-of-set finalize + patch shape
 export { foldAnswer, finalizeAssessment, mcqPatch } from './runner';

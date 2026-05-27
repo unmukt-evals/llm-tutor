@@ -48,3 +48,21 @@ export function applyStressSelfMark(
     stressTest: { ...state.stressTest, [lens]: mark },
   };
 }
+
+export interface StressTestPatch {
+  path: ['modules', string, 'stressTest'];
+  value: ModuleState['stressTest'];
+}
+
+/**
+ * Build the `/api/state` PATCH descriptor for persisting the stressTest slice
+ * after a self-mark. Pairs with `patchState(patch.path, patch.value)` in the
+ * api-client, mirroring `mcqPatch` (runner.ts) so SelfRevealPanel never inlines
+ * the state path.
+ */
+export function stressTestPatch(moduleId: string, state: ModuleState): StressTestPatch {
+  return {
+    path: ['modules', moduleId, 'stressTest'],
+    value: state.stressTest,
+  };
+}

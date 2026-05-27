@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { revealForDrill, revealForStressTest, applyStressSelfMark } from '../self';
+import { revealForDrill, revealForStressTest, applyStressSelfMark, stressTestPatch } from '../self';
 import type { Drill, StressTest, ModuleState } from '../../types';
 import { emptyMatrix } from '../matrix';
 
@@ -63,5 +63,23 @@ describe('applyStressSelfMark', () => {
     expect(s.stressTest.analyst).toBe('not_yet');
     s = applyStressSelfMark(s, 'analyst', 'passed');
     expect(s.stressTest.analyst).toBe('passed');
+  });
+});
+
+describe('stressTestPatch', () => {
+  it('builds the /api/state PATCH descriptor for the stressTest slice', () => {
+    const s = applyStressSelfMark(freshState(), 'board', 'passed');
+    const patch = stressTestPatch('B01', s);
+    expect(patch.path).toEqual(['modules', 'B01', 'stressTest']);
+    expect(patch.value).toEqual({ board: 'passed' });
+  });
+
+  it('points at the value from the updated state, not the original', () => {
+    const s0 = freshState();
+    const s1 = applyStressSelfMark(s0, 'researcher', 'not_yet');
+    const patch = stressTestPatch('B07', s1);
+    expect(patch.value.researcher).toBe('not_yet');
+    // original untouched
+    expect(stressTestPatch('B07', s0).value).toEqual({});
   });
 });
