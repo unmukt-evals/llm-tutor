@@ -39,7 +39,7 @@ export default function ModuleReaderClient({ module }: ModuleReaderClientProps) 
       <DepthToggle current={depth} onChange={setDepth} availability={availability} />
 
       {resolved.authored && resolved.content ? (
-        <article>
+        <article className="prose prose-slate max-w-none">
           <ReactMarkdown>{resolved.content}</ReactMarkdown>
         </article>
       ) : (
