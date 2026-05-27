@@ -1,6 +1,6 @@
 import type {
   PerformanceMatrix, ChosenDistractor, MCQPool, Diagnosis, Dimension, DepthPass,
-} from '../types';
+} from '@/lib/types';
 import { accuracyByDimension } from './matrix';
 
 const DIMENSIONS: Dimension[] = ['topic', 'logic', 'example', 'extension'];

@@ -1,4 +1,4 @@
-import type { PerformanceMatrix, Difficulty, Dimension } from '../types';
+import type { PerformanceMatrix, Difficulty, Dimension } from '@/lib/types';
 import { accuracyByDimension } from './matrix';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];

@@ -1,4 +1,4 @@
-import type { Drill, StressTest, ModuleState } from '../types';
+import type { Drill, StressTest, ModuleState } from '@/lib/types';
 
 export interface DrillReveal {
   scenario: string;

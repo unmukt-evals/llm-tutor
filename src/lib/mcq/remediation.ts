@@ -1,6 +1,6 @@
 import type {
   ModuleState, Diagnosis, MCQPool, MCQQuestion, Dimension, Difficulty, DimensionStatus,
-} from '../types';
+} from '@/lib/types';
 import { profileFromMatrix } from './matrix';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];

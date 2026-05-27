@@ -1,4 +1,4 @@
-import type { MCQPool, MCQQuestion, ModuleState, AssessmentSpec, Difficulty, Dimension } from '../types';
+import type { MCQPool, MCQQuestion, ModuleState, AssessmentSpec, Difficulty, Dimension } from '@/lib/types';
 import { accuracyByDimension } from './matrix';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];

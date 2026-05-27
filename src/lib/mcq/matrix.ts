@@ -1,6 +1,6 @@
 import type {
   MCQAnswer, MCQQuestion, PerformanceMatrix, Cell, Dimension, DimensionStatus, DimensionProfile,
-} from '../types';
+} from '@/lib/types';
 
 const DIMENSIONS: Dimension[] = ['topic', 'logic', 'example', 'extension'];
 
