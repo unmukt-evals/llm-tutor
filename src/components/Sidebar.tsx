@@ -68,6 +68,24 @@ export default function Sidebar({ groups }: SidebarProps) {
         </button>
       </div>
 
+      <div className="px-2 pb-2">
+        <Link
+          href="/source"
+          title="Add source"
+          aria-current={pathname === '/source' ? 'page' : undefined}
+          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            pathname === '/source'
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <span aria-hidden className="text-base leading-none">
+            +
+          </span>
+          {!collapsed && <span className="truncate">Add source</span>}
+        </Link>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {groups.map((group) => (
           <section key={group.track} className="mb-4">
