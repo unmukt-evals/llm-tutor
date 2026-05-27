@@ -33,10 +33,8 @@ describe('foundation composition (public barrels)', () => {
 
     // S-STATE: default read, mutate the loaded module's state, atomic write, reload.
     const store = getStateStore(dir);
-    const before = await store.read();
-    expect(before.version).toBe(1);
-
     const state = await store.read();
+    expect(state.version).toBe(1);
     state.xp.total = 42;
     state.modules[mod!.id] = { ...(await store.getModule(mod!.id)), mastery: 'fuzzy' };
     await store.write(state);

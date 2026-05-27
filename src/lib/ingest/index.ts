@@ -3,9 +3,6 @@
 import type { CurriculumRepository } from '@/lib/types';
 import { CurriculumRepositoryImpl } from '@/lib/ingest/repository';
 
-export { parseModule } from '@/lib/ingest/parse-module';
-export { CurriculumRepositoryImpl } from '@/lib/ingest/repository';
-
 /** §7 factory: returns the concrete CurriculumRepository for the app to use. */
 export function getCurriculumRepository(): CurriculumRepository {
   return new CurriculumRepositoryImpl();
