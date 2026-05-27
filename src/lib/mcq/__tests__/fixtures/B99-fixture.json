@@ -1,0 +1,197 @@
+{
+  "moduleId": "B99",
+  "questions": [
+    {
+      "id": "B99-e-topic",
+      "moduleId": "B99",
+      "difficulty": "easy",
+      "dimension": "topic",
+      "stem": "An eval measures…",
+      "options": ["a capability", "a vibe", "a brand", "a price"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "treats eval as subjective",
+        "2": "confuses eval with marketing",
+        "3": "confuses eval with cost"
+      },
+      "explanation": "An eval measures a capability under test.",
+      "sourceRef": "S1"
+    },
+    {
+      "id": "B99-e-logic",
+      "moduleId": "B99",
+      "difficulty": "easy",
+      "dimension": "logic",
+      "stem": "Why hold the test set fixed?",
+      "options": ["to compare runs", "to save money", "to look fast", "to please users"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses rigor with cost",
+        "2": "confuses rigor with speed",
+        "3": "confuses rigor with UX"
+      },
+      "explanation": "A fixed set makes runs comparable.",
+      "sourceRef": "S1"
+    },
+    {
+      "id": "B99-e-example",
+      "moduleId": "B99",
+      "difficulty": "easy",
+      "dimension": "example",
+      "stem": "Which is a concrete eval case?",
+      "options": ["a labeled prompt+expected output", "a roadmap", "a slogan", "a budget"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses case with plan",
+        "2": "confuses case with marketing",
+        "3": "confuses case with finance"
+      },
+      "explanation": "A case is an input with an expected output.",
+      "sourceRef": "S2"
+    },
+    {
+      "id": "B99-e-ext",
+      "moduleId": "B99",
+      "difficulty": "easy",
+      "dimension": "extension",
+      "stem": "Evals generalize best to…",
+      "options": ["new but similar tasks", "unrelated domains", "nothing", "only the exact cases"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "overclaims transfer",
+        "2": "denies transfer",
+        "3": "denies any generalization"
+      },
+      "explanation": "Evals transfer to nearby tasks, not arbitrary ones.",
+      "sourceRef": "S3"
+    },
+    {
+      "id": "B99-m-topic",
+      "moduleId": "B99",
+      "difficulty": "medium",
+      "dimension": "topic",
+      "stem": "Fairness in an eval means…",
+      "options": ["invariance to nuisance factors", "largest test set", "newest model", "cheapest run"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses sample size with construct validity",
+        "2": "thinks capability==recency",
+        "3": "confuses fairness with cost"
+      },
+      "explanation": "Fairness = invariance to nuisance factors.",
+      "sourceRef": "S4"
+    },
+    {
+      "id": "B99-m-logic",
+      "moduleId": "B99",
+      "difficulty": "medium",
+      "dimension": "logic",
+      "stem": "A flaky verifier mainly threatens…",
+      "options": ["score validity", "disk usage", "UI color", "license cost"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses validity with storage",
+        "2": "confuses validity with UI",
+        "3": "confuses validity with cost"
+      },
+      "explanation": "A flaky verifier corrupts the score's meaning.",
+      "sourceRef": "S4"
+    },
+    {
+      "id": "B99-m-example",
+      "moduleId": "B99",
+      "difficulty": "medium",
+      "dimension": "example",
+      "stem": "Which exemplifies contamination?",
+      "options": ["test items leaked into training", "a typo in a prompt", "a slow GPU", "a missing README"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses contamination with noise",
+        "2": "confuses contamination with latency",
+        "3": "confuses contamination with docs"
+      },
+      "explanation": "Contamination = train/test overlap.",
+      "sourceRef": "S5"
+    },
+    {
+      "id": "B99-m-ext",
+      "moduleId": "B99",
+      "difficulty": "medium",
+      "dimension": "extension",
+      "stem": "Your eval passes; a new paraphrased prompt fails. This signals…",
+      "options": ["weak generalization to paraphrase", "a contaminated set", "a fairness win", "a cheaper model"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "misattributes transfer failure to contamination",
+        "2": "calls a failure a win",
+        "3": "confuses transfer with cost"
+      },
+      "explanation": "Paraphrase failure = a transfer/extension gap.",
+      "sourceRef": "S5"
+    },
+    {
+      "id": "B99-h-topic",
+      "moduleId": "B99",
+      "difficulty": "hard",
+      "dimension": "topic",
+      "stem": "Construct validity is undermined when…",
+      "options": ["the metric measures the wrong thing", "the set is large", "the model is new", "the run is fast"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses validity with size",
+        "2": "confuses validity with recency",
+        "3": "confuses validity with speed"
+      },
+      "explanation": "Validity fails when the metric proxies the wrong construct.",
+      "sourceRef": "S6"
+    },
+    {
+      "id": "B99-h-logic",
+      "moduleId": "B99",
+      "difficulty": "hard",
+      "dimension": "logic",
+      "stem": "Determinism matters in scoring because…",
+      "options": ["non-determinism confounds comparison", "it saves money", "it looks professional", "users prefer it"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses rigor with cost",
+        "2": "confuses rigor with optics",
+        "3": "confuses rigor with UX"
+      },
+      "explanation": "Non-deterministic scoring makes runs incomparable.",
+      "sourceRef": "S6"
+    },
+    {
+      "id": "B99-h-example",
+      "moduleId": "B99",
+      "difficulty": "hard",
+      "dimension": "example",
+      "stem": "Which is the best worked example of drift?",
+      "options": ["same eval, scores fall as the world changes", "a one-time typo", "a slow batch", "a license renewal"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses drift with a single error",
+        "2": "confuses drift with latency",
+        "3": "confuses drift with admin"
+      },
+      "explanation": "Drift = systematic change over time, not a one-off.",
+      "sourceRef": "S7"
+    },
+    {
+      "id": "B99-h-ext",
+      "moduleId": "B99",
+      "difficulty": "hard",
+      "dimension": "extension",
+      "stem": "To predict prod behavior from an eval you must…",
+      "options": ["match the eval distribution to prod", "grow the test set", "use a newer model", "run it faster"],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "confuses transfer with size",
+        "2": "confuses transfer with recency",
+        "3": "confuses transfer with speed"
+      },
+      "explanation": "Transfer to prod requires distribution match, not scale.",
+      "sourceRef": "S7"
+    }
+  ]
+}

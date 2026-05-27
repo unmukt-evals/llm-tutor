@@ -1,0 +1,16 @@
+{
+  "moduleId": "BAD",
+  "questions": [
+    {
+      "id": "BAD-q1",
+      "moduleId": "BAD",
+      "difficulty": "easy",
+      "dimension": "topic",
+      "stem": "this question is malformed",
+      "options": ["a", "b", "c"],
+      "correctIndex": 0,
+      "distractorMisconception": { "1": "m1", "2": "m2" },
+      "explanation": "only three options — invalid"
+    }
+  ]
+}

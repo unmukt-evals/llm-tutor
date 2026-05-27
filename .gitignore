@@ -1,5 +1,8 @@
 node_modules/
 .next/
 .env.local
+# Next.js / TypeScript build artifacts (auto-generated)
+next-env.d.ts
+*.tsbuildinfo
 # app-owned learner state lives in the curriculum dir, not here
 
