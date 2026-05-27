@@ -61,6 +61,23 @@ describe('dueCards', () => {
     expect(due[0].state).toEqual({ lastTested: '', intervalDays: 7, ease: 'good' });
   });
 
+  it('synthesized default state is a fresh object, not the shared module constant', () => {
+    const cards = [card('c01', null)];
+    const due = dueCards(cards, {}, NOW);
+    // Mutating the returned state must not affect subsequent calls.
+    const stateRef = due[0].state;
+    stateRef.lastTested = 'mutated';
+    const due2 = dueCards(cards, {}, NOW);
+    expect(due2[0].state.lastTested).toBe('');
+  });
+
+  it('two never-reviewed cards get distinct state objects', () => {
+    const cards = [card('c01', null), card('c02', null)];
+    const due = dueCards(cards, {}, NOW);
+    expect(due).toHaveLength(2);
+    expect(due[0].state).not.toBe(due[1].state);
+  });
+
   it('defaults `now` to the current date when omitted', () => {
     const cards = [card('c01', null)];
     expect(dueCards(cards, {})).toHaveLength(1);

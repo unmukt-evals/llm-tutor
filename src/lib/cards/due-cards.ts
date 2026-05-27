@@ -38,7 +38,7 @@ export function dueCards(
     const existing = stateMap[card.id];
     if (!existing) {
       // Never reviewed in-app → always due.
-      due.push({ card, state: DEFAULT_STATE });
+      due.push({ card, state: { ...DEFAULT_STATE } });
       continue;
     }
     if (isCardDue(existing, now)) {
