@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Juice layer animations (V1 spec §1) — all gated by prefers-reduced-motion. */
+
+@keyframes xppop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes levelup {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+  }
+  60% {
+    transform: translateY(0) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes routefade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[xppop_300ms_ease-out\],
+  .animate-\[levelup_500ms_ease-out\],
+  .animate-\[routefade_250ms_ease-out\] {
+    animation: none;
+  }
+}

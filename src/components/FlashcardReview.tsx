@@ -13,6 +13,7 @@
 import { useCallback, useState } from 'react';
 import { srPatch } from '@/lib/cards/sr-update';
 import { patchState } from '@/lib/api-client';
+import { announceState } from '@/lib/ui/juice-events';
 import {
   advanceQueue,
   initialQueueState,
@@ -48,7 +49,9 @@ export default function FlashcardReview({ dueCards }: FlashcardReviewProps) {
         // srPatch delegates the SR schedule to applyRecall/nextSrInterval and
         // returns the exact { path, value } the api-client expects.
         const patch = srPatch(current.card.id, current.state, recall);
-        await patchState(patch.path, patch.value);
+        const next = await patchState(patch.path, patch.value);
+        // Fire the juice layer off the persisted state (pure detectors gate it).
+        announceState(next);
         setQueue((q) => advanceQueue(q, dueCards.length));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));

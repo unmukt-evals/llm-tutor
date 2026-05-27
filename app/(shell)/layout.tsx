@@ -11,9 +11,13 @@
 
 import type { ReactNode } from 'react';
 import Sidebar from '@/components/Sidebar';
+import XpPop from '@/components/XpPop';
+import LevelUpFlourish from '@/components/LevelUpFlourish';
+import RouteTransition from '@/components/RouteTransition';
 import { getCurriculumRepository } from '@/lib/ingest';
 import { getStateStore } from '@/lib/state';
 import { buildSidebarModel } from '@/lib/ui/sidebar-model';
+import { masterySnapshot } from '@/lib/ui/juice';
 
 export default async function ShellLayout({ children }: { children: ReactNode }) {
   const curriculumDir = process.env.CURRICULUM_DIR;
@@ -28,11 +32,16 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     getStateStore(curriculumDir).read(),
   ]);
   const groups = buildSidebarModel(curriculum, state);
+  const initialMastery = masterySnapshot(state);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar groups={groups} />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <RouteTransition>{children}</RouteTransition>
+      </div>
+      <XpPop initialXpTotal={state.xp.total} />
+      <LevelUpFlourish initialMastery={initialMastery} />
     </div>
   );
 }
