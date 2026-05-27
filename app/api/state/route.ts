@@ -59,15 +59,29 @@ export async function PATCH(request: Request) {
     );
   }
 
+  const store = getStateStore(getCurriculumDir());
+  // Read-modify-write: read current state, deep-set at path (clones along the
+  // path, preserving unknown keys), then atomically persist via the StateStore.
+  let current: TutorState;
   try {
-    const store = getStateStore(getCurriculumDir());
-    // Read-modify-write: read current state, deep-set at path (clones along the
-    // path, preserving unknown keys), then atomically persist via the StateStore.
-    const current = await store.read();
-    const updated = deepSet<TutorState>(current, body.path, body.value);
-    await store.write(updated);
-    return NextResponse.json(updated);
+    current = await store.read();
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
+
+  let updated: TutorState;
+  try {
+    updated = deepSet<TutorState>(current, body.path, body.value);
+  } catch (err) {
+    // deepSet throws on unsafe keys (__proto__, constructor, prototype) → 400.
+    return NextResponse.json({ error: String(err) }, { status: 400 });
+  }
+
+  try {
+    await store.write(updated);
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+
+  return NextResponse.json(updated);
 }

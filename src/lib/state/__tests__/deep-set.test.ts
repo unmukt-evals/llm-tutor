@@ -52,4 +52,23 @@ describe('deepSet', () => {
     const out = deepSet({}, ['sessionLog'], [{ module: 'B01', at: 'now', events: [] }]);
     expect(out).toEqual({ sessionLog: [{ module: 'B01', at: 'now', events: [] }] });
   });
+
+  // Prototype-pollution defense: unsafe keys must throw, never silently write.
+  it('throws for __proto__ in path', () => {
+    expect(() => deepSet({}, ['__proto__', 'x'], 1)).toThrow('deepSet: unsafe key');
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
+  });
+
+  it('throws for constructor in path', () => {
+    expect(() => deepSet({}, ['constructor'], 1)).toThrow('deepSet: unsafe key');
+  });
+
+  it('throws for prototype nested in path', () => {
+    expect(() => deepSet({}, ['a', 'prototype', 'b'], 1)).toThrow('deepSet: unsafe key');
+  });
+
+  it('does not pollute Object.prototype after rejected path', () => {
+    try { deepSet({}, ['__proto__', 'polluted'], true); } catch { /* expected */ }
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+  });
 });

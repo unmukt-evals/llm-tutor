@@ -10,7 +10,17 @@
  * - Intermediate keys that are missing or non-objects are (re)created as objects.
  * - Does not mutate `obj` or any of its nested objects on the written path.
  */
+// Keys that would let an attacker walk up to Object.prototype via bracket notation.
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export function deepSet<T>(obj: T, path: string[], value: unknown): T {
+  // Reject prototype-pollution vectors before touching any object property.
+  for (const key of path) {
+    if (UNSAFE_KEYS.has(key)) {
+      throw new Error(`deepSet: unsafe key "${key}" in path`);
+    }
+  }
+
   if (path.length === 0) {
     return value as T;
   }
