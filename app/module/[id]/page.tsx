@@ -14,6 +14,7 @@
 // state (mirrors app/page.tsx) rather than throwing — throwing would break
 // `next build`, which compiles this route.
 
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ModuleReaderClient from '@/components/ModuleReaderClient';
 import { getCurriculumRepository } from '@/lib/ingest';
@@ -67,8 +68,16 @@ export default async function ModuleReaderPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Module title */}
-      <h1 className="text-2xl font-semibold text-slate-900">{m.name}</h1>
+      {/* Module title + entry point to the MCQ diagnostic assessment. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">{m.name}</h1>
+        <Link
+          href={`/module/${id}/assess`}
+          className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+        >
+          Start assessment
+        </Link>
+      </div>
 
       {/* Anchor card — lists the module's anchor scenarios. */}
       <section>

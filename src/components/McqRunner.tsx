@@ -13,15 +13,18 @@
 
 import { useMemo, useState } from 'react';
 import type { MCQPool, MCQQuestion, ModuleState } from '@/lib/types';
+// Import directly from the pure submodules rather than the @/lib/mcq barrel:
+// the barrel re-exports FileMCQRepository, which pulls node:fs/promises +
+// node:path — those cannot be bundled into this client component.
+import { selectAssessment } from '@/lib/mcq/select';
+import { gradeAnswer } from '@/lib/mcq/grade';
 import {
-  selectAssessment,
-  gradeAnswer,
   foldAnswer,
   finalizeAssessment,
   mcqPatch,
-  routeRemediation,
   type McqState,
-} from '@/lib/mcq';
+} from '@/lib/mcq/runner';
+import { routeRemediation } from '@/lib/mcq/localize';
 import { patchState } from '@/lib/api-client';
 import { McqFeedback } from '@/components/McqFeedback';
 import { DimensionProfileCard } from '@/components/DimensionProfileCard';

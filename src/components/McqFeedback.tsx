@@ -2,11 +2,15 @@
 // Per-question MCQ feedback view (plan-03 Task 11).
 //
 // Pure presentational — no state, no fetch.
-// Delegates all content logic to feedbackFor() from @/lib/mcq.
+// Delegates all content logic to feedbackFor() from the pure grade submodule.
 // Accessible: correct/incorrect communicated via text + role, not colour only.
+//
+// Import from @/lib/mcq/grade directly, not the @/lib/mcq barrel: the barrel
+// re-exports FileMCQRepository (node:fs/promises + node:path), which cannot be
+// bundled into this client component.
 
 import type { MCQQuestion } from '@/lib/types';
-import { feedbackFor } from '@/lib/mcq';
+import { feedbackFor } from '@/lib/mcq/grade';
 
 interface McqFeedbackProps {
   question: MCQQuestion;
