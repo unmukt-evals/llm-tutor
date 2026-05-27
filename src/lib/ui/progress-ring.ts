@@ -60,3 +60,21 @@ export function ringVisual(mastery: Mastery, openDiagnosis = false): RingVisual 
     label: openDiagnosis ? 'Needs attention' : LABEL[mastery],
   };
 }
+
+export interface RingGeometry {
+  circumference: number;
+  /** stroke-dashoffset: circumference * (1 - clampedFraction). */
+  dashOffset: number;
+}
+
+/** Clamp a number into [min,max]. */
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+/** Pure SVG ring geometry from a stroke radius + fill fraction. */
+export function ringGeometry(radius: number, fraction: number): RingGeometry {
+  const circumference = 2 * Math.PI * radius;
+  const f = clamp(fraction, 0, 1);
+  return { circumference, dashOffset: circumference * (1 - f) };
+}

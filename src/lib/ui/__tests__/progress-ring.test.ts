@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ringVisual, RING_COLORS } from '@/lib/ui/progress-ring';
+import { ringVisual, ringGeometry, RING_COLORS } from '@/lib/ui/progress-ring';
 
 describe('ringVisual', () => {
   it('maps blank → fraction 0', () => {
@@ -50,5 +50,32 @@ describe('ringVisual', () => {
       expect(v.fraction).toBeGreaterThanOrEqual(0);
       expect(v.fraction).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe('ringGeometry', () => {
+  it('computes circumference from radius', () => {
+    const g = ringGeometry(10, 0.5);
+    expect(g.circumference).toBeCloseTo(2 * Math.PI * 10, 10);
+  });
+
+  it('fraction 0 → dashoffset === circumference (nothing shown)', () => {
+    const g = ringGeometry(10, 0);
+    expect(g.dashOffset).toBeCloseTo(g.circumference, 10);
+  });
+
+  it('fraction 1 → dashoffset 0 (full circle shown)', () => {
+    const g = ringGeometry(10, 1);
+    expect(g.dashOffset).toBeCloseTo(0, 10);
+  });
+
+  it('fraction 0.5 → dashoffset is half the circumference', () => {
+    const g = ringGeometry(10, 0.5);
+    expect(g.dashOffset).toBeCloseTo(g.circumference / 2, 10);
+  });
+
+  it('clamps out-of-range fractions to [0,1]', () => {
+    expect(ringGeometry(10, -1).dashOffset).toBeCloseTo(ringGeometry(10, 0).circumference, 10);
+    expect(ringGeometry(10, 5).dashOffset).toBeCloseTo(0, 10);
   });
 });
