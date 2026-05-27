@@ -10,6 +10,7 @@
 'use client';
 
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import DepthToggle from '@/components/DepthToggle';
 import DiagramPane from '@/components/DiagramPane';
 import {
@@ -38,8 +39,8 @@ export default function ModuleReaderClient({ module }: ModuleReaderClientProps) 
       <DepthToggle current={depth} onChange={setDepth} availability={availability} />
 
       {resolved.authored && resolved.content ? (
-        <article className="prose prose-slate max-w-none whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-          {resolved.content}
+        <article>
+          <ReactMarkdown>{resolved.content}</ReactMarkdown>
         </article>
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-4 text-sm italic text-slate-500">
