@@ -13,18 +13,20 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import DepthToggle from '@/components/DepthToggle';
 import DiagramPane from '@/components/DiagramPane';
+import { SelfRevealPanel } from '@/components/SelfRevealPanel';
 import {
   DEFAULT_DEPTH,
   DEPTH_OPTIONS,
   resolvePass,
 } from '@/lib/reader/select-pass';
-import type { DepthPass, Module } from '@/lib/types';
+import type { DepthPass, Module, ModuleState } from '@/lib/types';
 
 interface ModuleReaderClientProps {
   module: Module;
+  state: ModuleState;
 }
 
-export default function ModuleReaderClient({ module }: ModuleReaderClientProps) {
+export default function ModuleReaderClient({ module, state }: ModuleReaderClientProps) {
   const [depth, setDepth] = useState<DepthPass>(DEFAULT_DEPTH);
 
   // Which passes are authored — drives DepthToggle's dimming + the body state.
@@ -51,6 +53,48 @@ export default function ModuleReaderClient({ module }: ModuleReaderClientProps) 
 
       {/* Diagrams from the module's engineer pass. Returns null when empty. */}
       <DiagramPane diagrams={module.diagrams} />
+
+      {/* Practice / self-assess — drills (acknowledge-only) + stress-test pool
+          (each lens persists its verdict to ModuleState.stressTest). */}
+      {(module.drills.length > 0 || module.stressTests.length > 0) && (
+        <section className="space-y-6 border-t border-slate-200 pt-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Practice / self-assess
+          </h2>
+
+          {module.drills.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Application drills
+              </h3>
+              {module.drills.map((drill, i) => (
+                <div key={`drill-${i}`} className="rounded-lg bg-slate-50 p-2">
+                  <SelfRevealPanel mode="drill" drill={drill} sources={module.sources} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {module.stressTests.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Stress-test pool
+              </h3>
+              {module.stressTests.map((stressTest, i) => (
+                <div key={`stress-${stressTest.lens}-${i}`} className="rounded-lg bg-slate-50 p-2">
+                  <SelfRevealPanel
+                    mode="stressTest"
+                    stressTest={stressTest}
+                    moduleId={module.id}
+                    state={state}
+                    sources={module.sources}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </section>
   );
 }

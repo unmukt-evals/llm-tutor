@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ModuleReaderClient from '@/components/ModuleReaderClient';
 import { getCurriculumRepository } from '@/lib/ingest';
+import { getStateStore } from '@/lib/state';
 
 interface PageProps {
   // Next 15: dynamic route params are async.
@@ -44,6 +45,9 @@ export default async function ModuleReaderPage({ params }: PageProps) {
   const curriculum = await repo.load(curriculumDir);
   const mod = curriculum.byId(id);
   if (!mod) notFound();
+
+  // Persisted module state — seeds the stress-test self-marks in the reader.
+  const moduleState = await getStateStore(curriculumDir).getModule(id);
 
   // `module` is the reserved word in some contexts; alias for clarity in JSX.
   const m = mod;
@@ -99,8 +103,8 @@ export default async function ModuleReaderPage({ params }: PageProps) {
         )}
       </section>
 
-      {/* Depth toggle + pass body + diagrams — client interactive. */}
-      <ModuleReaderClient module={m} />
+      {/* Depth toggle + pass body + diagrams + practice — client interactive. */}
+      <ModuleReaderClient module={m} state={moduleState} />
     </main>
   );
 }

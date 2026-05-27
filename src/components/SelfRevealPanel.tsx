@@ -28,7 +28,7 @@ import {
   applyStressSelfMark,
   stressTestPatch,
   type SelfMark,
-} from '@/lib/mcq';
+} from '@/lib/mcq/self';
 import { patchState } from '@/lib/api-client';
 
 type DrillProps = {
