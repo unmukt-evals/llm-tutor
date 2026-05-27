@@ -55,6 +55,29 @@ describe('JsonStateStore.read', () => {
     expect(s.version).toBe(1);
     expect(s.modules).toEqual({});
   });
+
+  it('returns a valid default-shaped state when the sidecar is a JSON array', async () => {
+    await writeFile(join(dir, '_llmtutor-state.json'), '[]', 'utf8');
+    const store = new JsonStateStore(dir);
+    const s = await store.read();
+    expect(s.version).toBe(1);
+    expect(s.modules).toEqual({});
+    expect(s.streak).toBeDefined();
+    expect(s.xp).toBeDefined();
+    expect(s.sessionLog).toBeDefined();
+  });
+
+  it('merges a partial object sidecar with defaults so all top-level keys exist', async () => {
+    await writeFile(join(dir, '_llmtutor-state.json'), JSON.stringify({ version: 1 }), 'utf8');
+    const store = new JsonStateStore(dir);
+    const s = await store.read();
+    expect(s.version).toBe(1);
+    expect(s.modules).toEqual({});
+    expect(s.flashcards).toBeDefined();
+    expect(s.xp).toBeDefined();
+    expect(s.streak).toBeDefined();
+    expect(s.sessionLog).toBeDefined();
+  });
 });
 
 describe('JsonStateStore.getModule', () => {

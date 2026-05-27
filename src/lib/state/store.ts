@@ -24,8 +24,8 @@ export class JsonStateStore implements StateStore {
     // Unparseable / invalid-shape JSON must not crash the app: fall back to default.
     try {
       const parsed: unknown = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) return defaultTutorState();
-      return parsed as TutorState;
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return defaultTutorState();
+      return { ...defaultTutorState(), ...(parsed as Partial<TutorState>) };
     } catch {
       return defaultTutorState();
     }
