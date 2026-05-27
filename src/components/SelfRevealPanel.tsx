@@ -20,7 +20,7 @@
 //     does NOT persist (drills don't write to stressTest; see plan §5 / §7).
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Drill, StressTest, ModuleState } from '@/lib/types';
 import {
   revealForDrill,
@@ -63,19 +63,20 @@ export function SelfRevealPanel(props: SelfRevealPanelProps) {
   const sources = props.sources ?? [];
   // Normalise both reveal shapes to { scenario, doubleClicks, rubric }.
   // StressReveal has no double-clicks → empty list.
-  const reveal =
-    props.mode === 'drill'
-      ? (() => {
-          const r = revealForDrill(props.drill, sources);
-          return { scenario: r.scenario, doubleClicks: r.doubleClicks, rubric: r.rubric };
-        })()
-      : (() => {
-          const r = revealForStressTest(props.stressTest, sources);
-          return { scenario: r.scenario, doubleClicks: [] as string[], rubric: r.rubric };
-        })();
+  const reveal = useMemo(() => {
+    if (props.mode === 'drill') {
+      const r = revealForDrill(props.drill, sources);
+      return { scenario: r.scenario, doubleClicks: r.doubleClicks, rubric: r.rubric };
+    } else {
+      const r = revealForStressTest(props.stressTest, sources);
+      return { scenario: r.scenario, doubleClicks: [] as string[], rubric: r.rubric };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.mode, props.mode === 'drill' ? props.drill : props.stressTest, sources.join('\0')]);
 
   async function markStressTest(mark: SelfMark) {
     if (props.mode !== 'stressTest') return;
+    if (marked !== null || saving) return;
     const next = applyStressSelfMark(props.state, props.stressTest.lens, mark);
     setMarked(mark);
     props.onMark?.(mark, next);
@@ -170,6 +171,7 @@ export function SelfRevealPanel(props: SelfRevealPanelProps) {
               <button
                 type="button"
                 onClick={() => markStressTest('passed')}
+                disabled={saving || marked !== null}
                 aria-pressed={marked === 'passed'}
                 className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                   marked === 'passed'
@@ -182,6 +184,7 @@ export function SelfRevealPanel(props: SelfRevealPanelProps) {
               <button
                 type="button"
                 onClick={() => markStressTest('not_yet')}
+                disabled={saving || marked !== null}
                 aria-pressed={marked === 'not_yet'}
                 className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                   marked === 'not_yet'
