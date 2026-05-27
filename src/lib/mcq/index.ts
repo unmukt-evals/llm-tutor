@@ -6,6 +6,7 @@ import { FileMCQRepository } from './repository';
 
 export { FileMCQRepository, validatePool } from './repository';
 export type { FileNamer } from './repository';
+export { selectAssessment } from './select';
 
 /**
  * Factory (00-shared-model §7). Pool files live at
