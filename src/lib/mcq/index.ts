@@ -34,6 +34,10 @@ export {
 export { revealForDrill, revealForStressTest, applyStressSelfMark } from './self';
 export type { DrillReveal, StressReveal, SelfMark } from './self';
 
+// Runner orchestration (pure): per-answer fold + end-of-set finalize + patch shape
+export { foldAnswer, finalizeAssessment, mcqPatch } from './runner';
+export type { McqState, McqPatch } from './runner';
+
 /**
  * Factory (00-shared-model §7). Pool files live at
  * `<curriculumDir>/mcq/<moduleId>.json`, so this points a FileMCQRepository at
