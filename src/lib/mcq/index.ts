@@ -8,6 +8,8 @@ export { FileMCQRepository, validatePool } from './repository';
 export type { FileNamer } from './repository';
 export { selectAssessment } from './select';
 export { localize, routeRemediation } from './localize';
+export { gradeAnswer, feedbackFor } from './grade';
+export type { QuestionFeedback } from './grade';
 
 /**
  * Factory (00-shared-model §7). Pool files live at
