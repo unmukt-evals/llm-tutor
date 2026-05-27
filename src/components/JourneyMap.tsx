@@ -3,11 +3,12 @@
 // Receives nodes + edges already derived server-side by deriveNodesEdges
 // (src/lib/map/derive-nodes-edges.ts) — NO business logic lives here. The
 // component is a thin adapter: it feeds the pre-derived MapNode[]/MapEdge[]
-// into React Flow's local node/edge state so drag positions work, and exposes
-// an optional onNodeClick hook (navigation is wired up in a later task).
+// into React Flow's local node/edge state so drag positions work, and
+// navigates to /module/<id> on node click (Task 11).
 'use client';
 
 import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ReactFlow,
   Background,
@@ -25,15 +26,14 @@ import type { MapNode, MapEdge } from '@/lib/map/derive-nodes-edges';
 interface JourneyMapProps {
   initialNodes: MapNode[];
   initialEdges: MapEdge[];
-  /** Optional click handler — node-click navigation is built in a later task. */
-  onNodeClick?: (moduleId: string) => void;
 }
 
 export default function JourneyMap({
   initialNodes,
   initialEdges,
-  onNodeClick,
 }: JourneyMapProps) {
+  const router = useRouter();
+
   // MapNode/MapEdge are plain-TS shapes that match React Flow's Node/Edge at
   // runtime (id, position, data, style / id, source, target, style). Cast on
   // the way in so React Flow's hooks can manage local drag state.
@@ -42,9 +42,9 @@ export default function JourneyMap({
 
   const handleNodeClick = useCallback<NodeMouseHandler>(
     (_event, node) => {
-      onNodeClick?.(node.id);
+      router.push(`/module/${node.id}`);
     },
-    [onNodeClick]
+    [router]
   );
 
   return (
