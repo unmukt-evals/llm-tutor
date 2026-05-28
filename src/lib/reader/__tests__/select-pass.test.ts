@@ -13,6 +13,7 @@ function makeModule(passes: Partial<Record<string, string>>): Module {
     anchors: [],
     passes: passes as Module['passes'],
     diagrams: [],
+    visuals: [],
     drills: [],
     stressTests: [],
     flashcardSeeds: [],

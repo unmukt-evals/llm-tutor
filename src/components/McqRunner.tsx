@@ -26,6 +26,7 @@ import {
 } from '@/lib/mcq/runner';
 import { routeRemediation } from '@/lib/mcq/localize';
 import { patchState } from '@/lib/api-client';
+import { announceState } from '@/lib/ui/juice-events';
 import { McqFeedback } from '@/components/McqFeedback';
 import { DimensionProfileCard } from '@/components/DimensionProfileCard';
 
@@ -97,7 +98,10 @@ export function McqRunner({
     setError(null);
     try {
       const patch = mcqPatch(moduleId, resolved);
-      await patchState(patch.path, patch.value);
+      const next = await patchState(patch.path, patch.value);
+      // Fire the juice layer off the persisted state (pure detectors decide
+      // whether the XP-pop / level-up flourish actually shows).
+      announceState(next);
     } catch (e) {
       // Stay usable — the results are still shown; only the save failed.
       setError(e instanceof Error ? e.message : String(e));

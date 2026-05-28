@@ -32,6 +32,50 @@ export interface Diagram {
   body: string;
 }
 
+// ── Visualizations (V-VIZ) ───────────────────────────────────────────────────
+// A module may declare REAL visualizations in a "## Visuals" section composed of
+// one or more fenced ```viz blocks, each carrying a JSON `Viz`. Coords/values are
+// PRECOMPUTED in the markdown — no runtime model. parse-visuals.ts validates the
+// per-type `data` shape; components consume the validated payloads below.
+export type VizType =
+  | 'embedding-scatter'
+  | 'vector-table'
+  | 'attention-heatmap'
+  | 'bar-compare';
+
+export interface Viz {
+  type: VizType;
+  title?: string;
+  data: unknown; // type-specific; validated per-type at parse time
+}
+
+export interface ScatterPoint {
+  label: string;
+  x: number;
+  y: number;
+  cluster: string;
+}
+export interface EmbeddingScatterData {
+  points: ScatterPoint[];
+  links?: { from: number; to: number }[];
+}
+
+export interface VectorTableData {
+  dims: string[];
+  rows: { token: string; values: number[] }[];
+}
+
+export interface AttentionHeatmapData {
+  rowLabels: string[];
+  colLabels: string[];
+  matrix: number[][];
+}
+
+export interface BarCompareData {
+  bars: { label: string; value: number }[];
+  unit?: string;
+}
+
 export interface Module {
   id: string; // "B01" (frontmatter module_id) — stable key everywhere
   track: TrackId;
@@ -42,6 +86,7 @@ export interface Module {
   anchors: string[]; // "## Anchor scenarios"
   passes: Partial<Record<DepthPass, string>>; // ### 10-year-old / Engineer / Operator
   diagrams: Diagram[]; // §7: fenced mermaid/ascii/code blocks from the engineer pass
+  visuals: Viz[]; // V-VIZ: parsed from the "## Visuals" section (```viz JSON blocks)
   labSpec?: string; // "## Lab spec"
   drills: Drill[]; // "## Application drills"
   stressTests: StressTest[]; // "## Stress-test pool"

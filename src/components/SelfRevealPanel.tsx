@@ -30,6 +30,7 @@ import {
   type SelfMark,
 } from '@/lib/mcq/self';
 import { patchState } from '@/lib/api-client';
+import { announceState } from '@/lib/ui/juice-events';
 
 type DrillProps = {
   mode: 'drill';
@@ -84,7 +85,9 @@ export function SelfRevealPanel(props: SelfRevealPanelProps) {
     setError(null);
     try {
       const patch = stressTestPatch(props.moduleId, next);
-      await patchState(patch.path, patch.value);
+      const persisted = await patchState(patch.path, patch.value);
+      // Fire the juice layer off the persisted state (pure detectors gate it).
+      announceState(persisted);
     } catch (e) {
       // Stay usable — the verdict is recorded locally; only the save failed.
       setError(e instanceof Error ? e.message : String(e));

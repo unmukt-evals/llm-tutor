@@ -5,6 +5,7 @@ import type {
   Drill,
   StressTest,
   Diagram,
+  Viz,
   Module,
   Curriculum,
   CurriculumRepository,
@@ -49,6 +50,7 @@ describe('shared types', () => {
       anchors: ['a scenario'],
       passes: { engineer: 'body' },
       diagrams: [diagram],
+      visuals: [],
       drills: [{ scenario: 's' }],
       stressTests: [{ lens: 'board', question: 'q' }],
       flashcardSeeds: ['seed'],
@@ -234,5 +236,17 @@ describe('shared types', () => {
     ]);
     expect(drill.scenario).toBe('s');
     expect(st.lens).toBe('analyst');
+  });
+});
+
+describe('Viz + Module.visuals types', () => {
+  it('constructs a Module with a typed visuals array', () => {
+    const viz: Viz = {
+      type: 'embedding-scatter',
+      title: 'demo',
+      data: { points: [{ label: 'a', x: 0, y: 0, cluster: 'c' }] },
+    };
+    const mod: Pick<Module, 'visuals'> = { visuals: [viz] };
+    expect(mod.visuals[0].type).toBe('embedding-scatter');
   });
 });

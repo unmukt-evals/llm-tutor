@@ -1,5 +1,6 @@
 import matter from 'gray-matter';
 import type { Diagram, Drill, Module, StressTest, TrackId } from '@/lib/types';
+import { parseVisuals } from '@/lib/ingest/parse-visuals';
 
 /**
  * Split markdown body into a map keyed by exact heading text (without the `#`s).
@@ -171,6 +172,7 @@ export function parseModule(raw: string): Module {
     anchors,
     passes,
     diagrams: extractDiagrams(passes.engineer),
+    visuals: parseVisuals(sections.get('Visuals')),
     labSpec: sections.get('Lab spec'),
     drills: parseDrills(sections),
     stressTests: parseStressTests(sections.get('Stress-test pool')),

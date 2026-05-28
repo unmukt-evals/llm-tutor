@@ -68,3 +68,13 @@ DC1: List three nondeterminism sources.
 
 - S4 — Construct validity in evals
 - S5 — Harness determinism
+
+## Visuals
+
+```viz
+{
+  "type": "bar-compare",
+  "title": "Eval vs production",
+  "data": { "bars": [{ "label": "eval", "value": 92 }, { "label": "prod", "value": 60 }], "unit": "%" }
+}
+```
