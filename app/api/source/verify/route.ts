@@ -4,8 +4,7 @@
 // reaches the client. FOLLOW-ON: swap LLMVerifier for a tinyfish web-grounded
 // Verifier behind the same interface.
 import { NextResponse } from 'next/server';
-import { getLLMClient } from '@/lib/llm/client';
-import { LLMVerifier } from '@/lib/llm/verify';
+import { getVerifier } from '@/lib/llm/verifier-factory';
 import type { Candidate, VerificationInput } from '@/lib/llm/types';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +40,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    const verifier = new LLMVerifier(getLLMClient());
+    const verifier = await getVerifier();
     const report = await verifier.verify(input);
     return NextResponse.json({ report });
   } catch (err) {
