@@ -8,6 +8,9 @@ import { computeContentHash } from '@/lib/cms/hash';
 import { parseModule } from '@/lib/ingest/parse-module';
 import { validatePool } from '@/lib/mcq/repository';
 import { parseFlashcards, type Flashcard } from '@/lib/cards/parse-flashcards';
+import { JsonStateStore } from '@/lib/state/store';
+import { defaultModuleState } from '@/lib/state/defaults';
+import type { ModuleState, TutorState } from '@/lib/types';
 
 /** Injectable FS edge — tests can swap in an in-memory shim. Defaults to
  *  `node:fs/promises` so production callers pass nothing. */
@@ -484,4 +487,181 @@ export function selectFlashcards(db: BSDatabase): Flashcard[] {
     front: r.front,
     back: r.back,
   }));
+}
+
+// ── Sidecar state mirror ────────────────────────────────────────────────────
+
+/**
+ * Mirror `_llmtutor-state.json` into the cache:
+ *   - `module_state`     (one row per moduleId; ModuleState columns + JSON blobs)
+ *   - `flashcard_state`  (one row per card id; SR state columns)
+ *   - `app_state`        (singleton id=1: version + xp + streak + sessionLog)
+ *
+ * Sidecar remains the source of truth (the learner writes to it through
+ * JsonStateStore.write). This function rewrites the cache to match.
+ *
+ * Idempotency: we compute a content_hash over the raw sidecar bytes (or, when
+ * the sidecar is missing, over the JSON-serialized defaults) and skip the
+ * rewrite when it matches index_rows[(kind='state', entity_id='_')].
+ */
+export async function indexState(
+  db: BSDatabase,
+  dir: string,
+  fs: FsLike = defaultFs,
+): Promise<void> {
+  const filePath = join(dir, '_llmtutor-state.json');
+
+  let raw: string | null = null;
+  let mtimeMs = 0;
+  try {
+    raw = await fs.readFile(filePath);
+    const s = await fs.stat(filePath);
+    mtimeMs = s.mtimeMs;
+  } catch {
+    // Missing sidecar is fine; JsonStateStore.read() returns defaults.
+    raw = null;
+  }
+
+  // Always go through JsonStateStore.read() so we use the same default-fallback
+  // semantics as the existing learner — never reimplement that surface here.
+  const state: TutorState = await new JsonStateStore(dir).read();
+  const hash = computeContentHash(raw ?? JSON.stringify(state));
+
+  const prev = db
+    .prepare("SELECT content_hash FROM index_rows WHERE kind = 'state' AND entity_id = '_'")
+    .get() as { content_hash: string } | undefined;
+  if (prev && prev.content_hash === hash) return;
+
+  const now = Date.now();
+
+  const tx = db.transaction(() => {
+    // Module state: clear + rewrite (sidecar is the source of truth for the map).
+    db.prepare('DELETE FROM module_state').run();
+    const insMod = db.prepare(
+      `INSERT INTO module_state(module_id, mastery, mastery_history_json,
+                                mcq_state_json, stress_test_json, updated_at)
+       VALUES (?,?,?,?,?,?)`,
+    );
+    for (const [moduleId, ms] of Object.entries(state.modules)) {
+      insMod.run(
+        moduleId,
+        ms.mastery,
+        JSON.stringify(ms.masteryHistory),
+        JSON.stringify(ms.mcq),
+        JSON.stringify(ms.stressTest),
+        now,
+      );
+    }
+
+    // Flashcard SR state.
+    db.prepare('DELETE FROM flashcard_state').run();
+    const insFc = db.prepare(
+      `INSERT INTO flashcard_state(card_id, last_tested, interval_days, ease, updated_at)
+       VALUES (?,?,?,?,?)`,
+    );
+    for (const [cardId, fc] of Object.entries(state.flashcards)) {
+      insFc.run(cardId, fc.lastTested, fc.intervalDays, fc.ease, now);
+    }
+
+    // App singleton.
+    db.prepare(
+      `INSERT INTO app_state(id, version, xp_total, xp_this_week, streak_count,
+                             streak_last_active, streak_freeze_tokens,
+                             session_log_json, updated_at)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         version=excluded.version,
+         xp_total=excluded.xp_total,
+         xp_this_week=excluded.xp_this_week,
+         streak_count=excluded.streak_count,
+         streak_last_active=excluded.streak_last_active,
+         streak_freeze_tokens=excluded.streak_freeze_tokens,
+         session_log_json=excluded.session_log_json,
+         updated_at=excluded.updated_at`,
+    ).run(
+      state.version,
+      state.xp.total,
+      state.xp.thisWeek,
+      state.streak.count,
+      state.streak.lastActive,
+      state.streak.freezeTokens,
+      JSON.stringify(state.sessionLog),
+      now,
+    );
+
+    db.prepare(
+      `INSERT INTO index_rows(kind, entity_id, content_hash, mtime_ms, indexed_at)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(kind, entity_id) DO UPDATE SET
+         content_hash=excluded.content_hash,
+         mtime_ms=excluded.mtime_ms,
+         indexed_at=excluded.indexed_at`,
+    ).run('state', '_', hash, mtimeMs, now);
+  });
+  tx();
+}
+
+/** Read the cached ModuleState for `id`, returning a default when no row exists. */
+export function selectModuleState(db: BSDatabase, id: string): ModuleState {
+  const row = db
+    .prepare(
+      `SELECT mastery, mastery_history_json, mcq_state_json, stress_test_json
+       FROM module_state WHERE module_id = ?`,
+    )
+    .get(id) as
+    | {
+        mastery: string;
+        mastery_history_json: string;
+        mcq_state_json: string;
+        stress_test_json: string;
+      }
+    | undefined;
+  if (!row) return defaultModuleState();
+  return {
+    mastery: row.mastery as ModuleState['mastery'],
+    masteryHistory: JSON.parse(row.mastery_history_json),
+    mcq: JSON.parse(row.mcq_state_json),
+    stressTest: JSON.parse(row.stress_test_json),
+  };
+}
+
+/** Read the cached app singleton — version + xp + streak + sessionLog. */
+export function selectAppState(
+  db: BSDatabase,
+): Pick<TutorState, 'version' | 'xp' | 'streak' | 'sessionLog'> {
+  const row = db
+    .prepare(
+      `SELECT version, xp_total, xp_this_week, streak_count, streak_last_active,
+              streak_freeze_tokens, session_log_json
+       FROM app_state WHERE id = 1`,
+    )
+    .get() as
+    | {
+        version: number;
+        xp_total: number;
+        xp_this_week: number;
+        streak_count: number;
+        streak_last_active: string;
+        streak_freeze_tokens: number;
+        session_log_json: string;
+      }
+    | undefined;
+  if (!row) {
+    return {
+      version: 1,
+      xp: { total: 0, thisWeek: 0 },
+      streak: { count: 0, lastActive: '', freezeTokens: 1 },
+      sessionLog: [],
+    };
+  }
+  return {
+    version: row.version as 1,
+    xp: { total: row.xp_total, thisWeek: row.xp_this_week },
+    streak: {
+      count: row.streak_count,
+      lastActive: row.streak_last_active,
+      freezeTokens: row.streak_freeze_tokens,
+    },
+    sessionLog: JSON.parse(row.session_log_json),
+  };
 }
