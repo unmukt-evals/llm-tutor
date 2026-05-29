@@ -22,6 +22,7 @@ import XpPop from '@/components/XpPop';
 import LevelUpFlourish from '@/components/LevelUpFlourish';
 import RouteTransition from '@/components/RouteTransition';
 import { getCmsIndex } from '@/lib/cms';
+import { startWatcher } from '@/lib/cms/watcher';
 import { buildSidebarModel } from '@/lib/ui/sidebar-model';
 import { masterySnapshot } from '@/lib/ui/juice';
 
@@ -34,6 +35,20 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   }
 
   const cms = await getCmsIndex(curriculumDir);
+
+  // Phase 3 — start the chokidar watcher on first dev-mode render. Singleton
+  // + idempotent inside `startWatcher`, so subsequent renders are no-ops. Gated
+  // on `NODE_ENV !== 'production'` inside startWatcher (returns null in prod).
+  // Try/catch so a watcher init failure (eg. EMFILE on too many open files)
+  // never crashes the page.
+  try {
+    startWatcher(curriculumDir, cms);
+  } catch (err) {
+    console.warn(
+      `[shell-layout] startWatcher failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   const curriculum = cms.getCurriculum();
   const state = cms.getFullState();
   const groups = buildSidebarModel(curriculum, state);

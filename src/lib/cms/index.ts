@@ -32,6 +32,60 @@ import type { TrackId } from '@/lib/types';
 
 const CACHE_FILE = '.llmtutor-cache.sqlite';
 
+/**
+ * Phase 3 helper — does the on-disk file backing this (kind, id) currently exist?
+ *
+ * Used by `reindexEntity` to distinguish "file was edited" (delegate to
+ * `indexEntity` for the normal reparse) from "file was deleted" (drop the
+ * cached rows). The watcher's `unlink` handler routes through `reindexEntity`,
+ * so this check is what makes file-deletion → row-drop work without forking
+ * the API surface.
+ *
+ * Module ids: the path is `<id>-<slug>.md` OR `<id>.md` (matches
+ * resolveModulePath in the indexer). We probe both via `fs.readdir` instead
+ * of guessing the slug.
+ *
+ * State always "exists" — JsonStateStore.read() returns defaults on missing
+ * sidecar, so deletion semantics for `state` mean "wipe the mirror to defaults",
+ * which the caller can request by passing `kind='state'` AFTER unlinking the
+ * sidecar — we return `false` only when the sidecar JSON is genuinely gone.
+ */
+async function fileExistsForEntity(
+  dir: string,
+  kind: EntityKind,
+  id: string,
+  fs: FsLike,
+): Promise<boolean> {
+  try {
+    switch (kind) {
+      case 'module': {
+        const entries = await fs.readdir(dir);
+        return entries.some(
+          (f) => f.endsWith('.md') && !f.startsWith('_') && (f.startsWith(`${id}-`) || f === `${id}.md`),
+        );
+      }
+      case 'pool': {
+        await fs.stat(join(dir, 'mcq', `${id}.json`));
+        return true;
+      }
+      case 'flashcards': {
+        await fs.stat(join(dir, '_flashcards.md'));
+        return true;
+      }
+      case 'state': {
+        await fs.stat(join(dir, '_llmtutor-state.json'));
+        return true;
+      }
+      case 'source': {
+        await fs.stat(join(dir, '_sources.json'));
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+}
+
 /** Construction options. `dbPath` overrides the default `<dir>/<CACHE_FILE>` so
  *  tests can use `':memory:'` and a stub fs without leaving artifacts behind. */
 export interface CmsIndexOptions {
@@ -417,6 +471,46 @@ function makeIndex(s: Singleton): CmsIndex {
             .prepare('SELECT indexed_at FROM index_rows WHERE kind = ? AND entity_id = ?')
             .get(kind, id) as { indexed_at: number } | undefined
         )?.indexed_at;
+
+        // Phase 3 — file-deleted detection. The watcher routes 'unlink' events
+        // through here; indexEntity itself throws ENOENT on a missing file, but
+        // for the deletion path we want to DROP the rows, not surface the error.
+        // We probe existence via `fs.stat` (the injectable edge) before delegating.
+        const exists = await fileExistsForEntity(dir, kind, id, fs);
+        if (!exists) {
+          // Delete the typed rows + the bookkeeping row. Mirrors the cascade in
+          // lazyRefresh's vanished-file branch. Wrapped in one tx for atomicity.
+          const tx = db.transaction(() => {
+            switch (kind) {
+              case 'module':
+                db.prepare('DELETE FROM modules WHERE id = ?').run(id);
+                break;
+              case 'pool':
+                db.prepare('DELETE FROM mcq_pools WHERE module_id = ?').run(id);
+                break;
+              case 'flashcards':
+                db.prepare('DELETE FROM flashcards').run();
+                break;
+              case 'state':
+                db.prepare('DELETE FROM app_state WHERE id = 1').run();
+                db.prepare('DELETE FROM module_state').run();
+                db.prepare('DELETE FROM flashcard_state').run();
+                break;
+              case 'source':
+                db.prepare('DELETE FROM sources WHERE id = ?').run(id);
+                break;
+            }
+            db
+              .prepare('DELETE FROM index_rows WHERE kind = ? AND entity_id = ?')
+              .run(kind, id);
+          });
+          tx();
+          // If `before` was undefined the row was already absent — treat as skipped.
+          return before === undefined
+            ? { indexed: 0, skipped: 1 }
+            : { indexed: 1, skipped: 0 };
+        }
+
         await indexEntity(db, dir, kind, id, fs);
         const after = (
           db

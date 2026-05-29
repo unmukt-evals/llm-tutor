@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { applyCandidate, moduleFileName as defaultModuleFileName } from '@/lib/source/apply';
 import { assertParsesAsModule } from '@/lib/llm/candidate';
+import { reindexAffected } from '@/lib/cms/reindex';
 import type { Candidate } from '@/lib/llm/types';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,24 @@ export async function POST(request: Request) {
         ? moduleFileName
         : defaultModuleFileName(mod.id, mod.name);
     const written = await applyCandidate(dir, candidate, fileName);
+
+    // Phase 3 — refresh the CMS mirror for the module + pool we just wrote so
+    // subsequent reads (sidebar, module page, assess page) see the change
+    // immediately without waiting for the next `lazyRefresh` mtime walk.
+    // The file write already succeeded; a reindex failure here must NOT fail
+    // the request — sidecar reconciliation on the next read is acceptable,
+    // mirroring the Phase 2 `/api/state` pattern.
+    try {
+      await reindexAffected(dir, 'module', mod.id);
+      await reindexAffected(dir, 'pool', mod.id);
+    } catch (err) {
+      console.warn(
+        `[api/source/apply] reindex failed (write succeeded): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+
     return NextResponse.json({ ok: true, written });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
