@@ -3,9 +3,10 @@ import { promises as fsp, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Database as BSDatabase } from 'better-sqlite3';
 
-import type { EntityKind, Module } from '@/lib/cms/types';
+import type { EntityKind, MCQPool, Module } from '@/lib/cms/types';
 import { computeContentHash } from '@/lib/cms/hash';
 import { parseModule } from '@/lib/ingest/parse-module';
+import { validatePool } from '@/lib/mcq/repository';
 
 /** Injectable FS edge — tests can swap in an in-memory shim. Defaults to
  *  `node:fs/promises` so production callers pass nothing. */
@@ -83,6 +84,9 @@ export async function indexEntity(
   switch (kind) {
     case 'module':
       writeModule(db, id, raw, hash, mtimeMs);
+      return;
+    case 'pool':
+      writePool(db, id, raw, hash, mtimeMs);
       return;
     default:
       throw new Error(`indexEntity: kind "${kind}" not implemented yet`);
@@ -299,4 +303,117 @@ export function selectModule(db: BSDatabase, id: string): Module | null {
   if (row.lab_spec !== null) out.labSpec = row.lab_spec;
   else out.labSpec = undefined;
   return out;
+}
+
+// ── MCQ pool ────────────────────────────────────────────────────────────────
+
+function writePool(
+  db: BSDatabase,
+  id: string,
+  raw: string,
+  hash: string,
+  mtimeMs: number,
+): void {
+  const parsed = validatePool(JSON.parse(raw));
+  if (parsed.moduleId !== id) {
+    throw new Error(
+      `indexer: pool file has moduleId "${parsed.moduleId}", expected "${id}"`,
+    );
+  }
+  const now = Date.now();
+
+  const tx = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO mcq_pools(module_id, content_hash, updated_at) VALUES (?,?,?)
+       ON CONFLICT(module_id) DO UPDATE SET
+         content_hash=excluded.content_hash,
+         updated_at=excluded.updated_at`,
+    ).run(parsed.moduleId, hash, now);
+
+    // Clear + rewrite all question rows so updates can shrink the pool.
+    db.prepare('DELETE FROM mcq_questions WHERE module_id = ?').run(parsed.moduleId);
+
+    const ins = db.prepare(
+      `INSERT INTO mcq_questions(id, module_id, ord, difficulty, dimension, stem,
+                                 options_json, correct_index,
+                                 distractor_misconceptions_json, explanation, source_ref)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    );
+    // Mirror FileMCQRepository.loadPool: normalize the moduleId onto every q.
+    parsed.questions.forEach((q, i) =>
+      ins.run(
+        q.id,
+        parsed.moduleId,
+        i,
+        q.difficulty,
+        q.dimension,
+        q.stem,
+        JSON.stringify(q.options),
+        q.correctIndex,
+        JSON.stringify(q.distractorMisconception),
+        q.explanation,
+        q.sourceRef ?? null,
+      ),
+    );
+
+    db.prepare(
+      `INSERT INTO index_rows(kind, entity_id, content_hash, mtime_ms, indexed_at)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(kind, entity_id) DO UPDATE SET
+         content_hash=excluded.content_hash,
+         mtime_ms=excluded.mtime_ms,
+         indexed_at=excluded.indexed_at`,
+    ).run('pool', parsed.moduleId, hash, mtimeMs, now);
+  });
+  tx();
+}
+
+/**
+ * Reconstruct an MCQPool from the cache. Returns null if no pool row exists.
+ * Output shape matches `FileMCQRepository.loadPool()` — moduleId is normalized
+ * onto every question — so the round-trip test can deep-equal the validator.
+ */
+export function selectPool(db: BSDatabase, id: string): MCQPool | null {
+  const head = db
+    .prepare('SELECT module_id FROM mcq_pools WHERE module_id = ?')
+    .get(id) as { module_id: string } | undefined;
+  if (!head) return null;
+
+  const rows = db
+    .prepare(
+      `SELECT id, module_id, difficulty, dimension, stem, options_json,
+              correct_index, distractor_misconceptions_json, explanation, source_ref
+       FROM mcq_questions WHERE module_id = ? ORDER BY ord`,
+    )
+    .all(id) as Array<{
+    id: string;
+    module_id: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    dimension: 'topic' | 'logic' | 'example' | 'extension';
+    stem: string;
+    options_json: string;
+    correct_index: number;
+    distractor_misconceptions_json: string;
+    explanation: string;
+    source_ref: string | null;
+  }>;
+
+  return {
+    moduleId: head.module_id,
+    questions: rows.map((r) => {
+      const q: MCQPool['questions'][number] = {
+        id: r.id,
+        moduleId: head.module_id,
+        difficulty: r.difficulty,
+        dimension: r.dimension,
+        stem: r.stem,
+        options: JSON.parse(r.options_json),
+        correctIndex: r.correct_index,
+        distractorMisconception: JSON.parse(r.distractor_misconceptions_json),
+        explanation: r.explanation,
+      };
+      if (r.source_ref !== null) q.sourceRef = r.source_ref;
+      return q;
+    }),
+  };
 }

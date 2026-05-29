@@ -79,8 +79,11 @@ CREATE TABLE module_flashcard_seeds (
 );
 
 -- ── MCQ pools + questions ───────────────────────────────────────────────────
+-- No FK to modules: a pool may be (re-)indexed before its module file is
+-- (re-)indexed (the indexer iterates each kind independently and the cache
+-- is a join over string moduleIds, not an enforced graph).
 CREATE TABLE mcq_pools (
-  module_id    TEXT PRIMARY KEY REFERENCES modules(id) ON DELETE CASCADE,
+  module_id    TEXT PRIMARY KEY,
   content_hash TEXT NOT NULL,
   updated_at   INTEGER NOT NULL
 );
