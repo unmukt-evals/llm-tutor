@@ -94,6 +94,26 @@ export interface Module {
   sources: string[]; // "## Sources" lines
 }
 
+export type SourceKind = 'url' | 'transcript' | 'doc' | 'paper';
+
+export interface Source {
+  id: string;                  // "S1", "S9d", or "src_<8-hex>" for new
+  kind: SourceKind;
+  title: string;
+  url?: string;
+  author?: string;             // free-form, optional
+  cluster?: string;            // e.g. "Cluster 1 — RL post-training"
+  summary?: string;            // the "What:" line in current _sources.md
+  thesis?: string;             // the "Thesis:" block
+  mechanism?: string;          // the "Mechanism that matters:" block
+  quotes?: string[];           // every "Quote:" bullet
+  grounds?: string[];          // module ids cited as Grounds, e.g. ["B2"]
+  raw_text?: string;           // fetched body (kind: 'url') or pasted text (kind: 'transcript')
+  fetched_at?: number;         // epoch ms
+  content_hash: string;        // sha256 hex over a canonical serialization
+  updated_at: number;          // epoch ms
+}
+
 export interface Curriculum {
   tracks: TrackId[];
   modules: Module[]; // ordered
@@ -119,6 +139,7 @@ export interface MCQQuestion {
   distractorMisconception: Record<string, string>; // optionIndex → misconception (required)
   explanation: string;
   sourceRef?: string; // "S4"
+  source_id?: string; // typed link into sources.id; populated when known
 }
 export interface MCQPool {
   moduleId: string;

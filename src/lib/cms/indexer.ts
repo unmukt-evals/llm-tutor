@@ -3,7 +3,8 @@ import { promises as fsp, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Database as BSDatabase } from 'better-sqlite3';
 
-import type { EntityKind, MCQPool, Module } from '@/lib/cms/types';
+import type { EntityKind, MCQPool, Module, SourcesDoc } from '@/lib/cms/types';
+import type { Source } from '@/lib/types';
 import { computeContentHash } from '@/lib/cms/hash';
 import { parseModule } from '@/lib/ingest/parse-module';
 import { validatePool } from '@/lib/mcq/repository';
@@ -95,9 +96,122 @@ export async function indexEntity(
     case 'flashcards':
       writeFlashcards(db, id, raw, hash, mtimeMs);
       return;
+    case 'source':
+      writeSources(db, raw, hash, mtimeMs);
+      return;
     default:
       throw new Error(`indexEntity: kind "${kind}" not implemented yet`);
   }
+}
+
+// ── Sources ──────────────────────────────────────────────────────────────────
+
+/**
+ * Parse `_sources.json`, validate it as a `SourcesDoc`, then in ONE transaction:
+ *   1. Upsert every Source into `sources` via INSERT … ON CONFLICT(id) DO UPDATE.
+ *   2. Delete any `sources` rows whose id is NOT in the incoming set (the JSON
+ *      is authoritative; ON DELETE CASCADE drops the `module_sources` links).
+ *   3. Update the `index_rows` bookkeeping row for (kind='source', entity_id='_sources').
+ */
+function writeSources(
+  db: BSDatabase,
+  raw: string,
+  hash: string,
+  mtimeMs: number,
+): void {
+  let doc: SourcesDoc;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      (parsed as SourcesDoc).version !== 1 ||
+      !Array.isArray((parsed as SourcesDoc).sources)
+    ) {
+      throw new TypeError(
+        'writeSources: _sources.json must be {"version":1,"sources":[...]}',
+      );
+    }
+    doc = parsed as SourcesDoc;
+  } catch (err) {
+    throw new Error(
+      `writeSources: failed to parse _sources.json — ${(err as Error).message}`,
+    );
+  }
+
+  const now = Date.now();
+  const sources: Source[] = doc.sources;
+  const ids = sources.map((s) => s.id);
+
+  const tx = db.transaction(() => {
+    const upsert = db.prepare(
+      `INSERT INTO sources
+         (id, kind, title, url, fetched_at, raw_text, summary,
+          content_hash, updated_at, author, cluster, thesis, mechanism,
+          quotes_json, grounds_json)
+       VALUES
+         (@id, @kind, @title, @url, @fetched_at, @raw_text, @summary,
+          @content_hash, @updated_at, @author, @cluster, @thesis, @mechanism,
+          @quotes_json, @grounds_json)
+       ON CONFLICT(id) DO UPDATE SET
+         kind=excluded.kind,
+         title=excluded.title,
+         url=excluded.url,
+         fetched_at=excluded.fetched_at,
+         raw_text=excluded.raw_text,
+         summary=excluded.summary,
+         content_hash=excluded.content_hash,
+         updated_at=excluded.updated_at,
+         author=excluded.author,
+         cluster=excluded.cluster,
+         thesis=excluded.thesis,
+         mechanism=excluded.mechanism,
+         quotes_json=excluded.quotes_json,
+         grounds_json=excluded.grounds_json`,
+    );
+
+    for (const s of sources) {
+      upsert.run({
+        id: s.id,
+        kind: s.kind,
+        title: s.title,
+        url: s.url ?? null,
+        fetched_at: s.fetched_at ?? null,
+        raw_text: s.raw_text ?? '',
+        summary: s.summary ?? null,
+        content_hash: s.content_hash,
+        updated_at: s.updated_at,
+        author: s.author ?? null,
+        cluster: s.cluster ?? null,
+        thesis: s.thesis ?? null,
+        mechanism: s.mechanism ?? null,
+        quotes_json: JSON.stringify(s.quotes ?? []),
+        grounds_json: JSON.stringify(s.grounds ?? []),
+      });
+    }
+
+    // JSON is authoritative — remove any sources that were deleted from the file.
+    if (ids.length === 0) {
+      // SQL `IN ()` is invalid; handle empty case separately.
+      db.prepare('DELETE FROM sources').run();
+    } else {
+      // Build a parameterized IN clause.
+      const placeholders = ids.map(() => '?').join(',');
+      db.prepare(`DELETE FROM sources WHERE id NOT IN (${placeholders})`).run(...ids);
+    }
+
+    // Update index_rows bookkeeping.
+    db.prepare(
+      `INSERT INTO index_rows(kind, entity_id, content_hash, mtime_ms, indexed_at)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(kind, entity_id) DO UPDATE SET
+         content_hash=excluded.content_hash,
+         mtime_ms=excluded.mtime_ms,
+         indexed_at=excluded.indexed_at`,
+    ).run('source', '_sources', hash, mtimeMs, now);
+  });
+
+  tx();
 }
 
 // ── Module ──────────────────────────────────────────────────────────────────
@@ -193,6 +307,26 @@ function writeModule(
       'INSERT INTO module_flashcard_seeds(module_id, ord, seed) VALUES (?,?,?)',
     );
     mod.flashcardSeeds.forEach((s, i) => insSeed.run(mod.id, i, s));
+
+    // (Re)populate module_sources from Module.primarySources.
+    // DELETE first so stale links are removed on every re-index.
+    db.prepare('DELETE FROM module_sources WHERE module_id = ?').run(mod.id);
+    const insModSrc = db.prepare(
+      'INSERT INTO module_sources (module_id, source_id) VALUES (?, ?)',
+    );
+    for (const sourceId of mod.primarySources) {
+      try {
+        insModSrc.run(mod.id, sourceId);
+      } catch (err) {
+        // Foreign-key failure: the source hasn't been indexed yet.
+        // Warn and continue — do NOT fail the whole module write.
+        console.warn(
+          `[cms.indexer] module_sources: FK constraint for source "${sourceId}" ` +
+          `on module "${mod.id}" — source not yet in sources table. ` +
+          `(${(err as Error).message})`,
+        );
+      }
+    }
 
     db.prepare(
       `INSERT INTO index_rows(kind, entity_id, content_hash, mtime_ms, indexed_at)
@@ -644,12 +778,16 @@ export interface IndexAllReport {
 }
 
 /**
- * Full curriculum sweep — mirrors the four on-disk surfaces the learner reads:
- *   1. every top-level `*.md` (skipping `_`-prefixed sidecars) → indexEntity('module', id)
+ * Full curriculum sweep — mirrors the five on-disk surfaces the learner reads:
+ *   1. `_sources.json` if present → indexEntity('source', '_sources')
+ *      Sources are indexed FIRST so that writeModule's `module_sources` FK
+ *      inserts succeed on a cold boot (sources(id) must exist before modules
+ *      reference them).
+ *   2. every top-level `*.md` (skipping `_`-prefixed sidecars) → indexEntity('module', id)
  *      where `id` is read from the file's frontmatter `module_id` (parseModule).
- *   2. every `mcq/*.json` → indexEntity('pool', basename-without-`.json`)
- *   3. `_flashcards.md` if present → indexEntity('flashcards', '_flashcards')
- *   4. `_llmtutor-state.json` (or defaults) → indexState
+ *   3. every `mcq/*.json` → indexEntity('pool', basename-without-`.json`)
+ *   4. `_flashcards.md` if present → indexEntity('flashcards', '_flashcards')
+ *   5. `_llmtutor-state.json` (or defaults) → indexState
  *
  * Per-file failures are collected into `errors` and surfaced as `console.warn`
  * — one broken file does NOT abort the batch (mirrors CurriculumRepositoryImpl).
@@ -674,11 +812,30 @@ export async function indexAll(
     return row?.indexed_at;
   };
 
-  // 1. Modules — read each markdown file once, parse its frontmatter to get the
+  // Read the top-level directory listing once — used by steps 1, 2, and 4.
+  const top = await fs.readdir(dir);
+
+  // 1. Sources (_sources.json if present) — indexed FIRST so that writeModule's
+  //    module_sources FK inserts succeed on a cold boot (sources(id) must exist
+  //    before modules reference them).
+  if (top.includes('_sources.json')) {
+    try {
+      const before = snapshot('source', '_sources');
+      await indexEntity(db, dir, 'source', '_sources', fs);
+      const after = snapshot('source', '_sources');
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[cms.indexAll] skipping _sources.json: ${msg}`);
+      errors.push({ kind: 'source', id: '_sources', error: msg });
+    }
+  }
+
+  // 2. Modules — read each markdown file once, parse its frontmatter to get the
   //    id, then call indexEntity('module', id) which reparses the same bytes.
   //    The double-parse is microseconds and keeps indexEntity's contract simple
   //    (it owns its own file read for hash-skip semantics).
-  const top = await fs.readdir(dir);
   const moduleFiles = top.filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort();
   for (const f of moduleFiles) {
     let id: string | null = null;
@@ -704,7 +861,7 @@ export async function indexAll(
     }
   }
 
-  // 2. Pools — id is the basename without `.json`.
+  // 3. Pools — id is the basename without `.json`.
   let mcqEntries: string[] = [];
   try {
     mcqEntries = await fs.readdir(join(dir, 'mcq'));
@@ -726,7 +883,7 @@ export async function indexAll(
     }
   }
 
-  // 3. Flashcards (single _flashcards.md if present).
+  // 4. Flashcards (single _flashcards.md if present).
   if (top.includes('_flashcards.md')) {
     try {
       const before = snapshot('flashcards', '_flashcards');
@@ -741,7 +898,7 @@ export async function indexAll(
     }
   }
 
-  // 4. State — always run; JsonStateStore.read() returns defaults on missing
+  // 5. State — always run; JsonStateStore.read() returns defaults on missing
   //    sidecar so we never throw here in practice.
   try {
     const before = snapshot('state', '_');

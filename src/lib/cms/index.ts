@@ -17,6 +17,7 @@ import {
   type FsLike,
   type IndexAllReport,
 } from '@/lib/cms/indexer';
+import { ensureSourcesJson } from '@/lib/cms/sources/ensure-json';
 import { computeContentHash } from '@/lib/cms/hash';
 import type {
   Curriculum,
@@ -25,12 +26,60 @@ import type {
   MCQPool,
   Module,
   ModuleState,
-  SourceRowsAsRendered,
   TutorState,
 } from '@/lib/cms/types';
-import type { TrackId } from '@/lib/types';
+import type { Source, SourceKind, TrackId } from '@/lib/types';
 
 const CACHE_FILE = '.llmtutor-cache.sqlite';
+
+// ── Source read helpers ───────────────────────────────────────────────────────
+
+/** Raw SQLite row shape for the `sources` table (all TEXT / INTEGER columns). */
+interface SourcesRow {
+  id: string;
+  kind: string;
+  title: string;
+  url: string | null;
+  author: string | null;
+  cluster: string | null;
+  summary: string | null;
+  thesis: string | null;
+  mechanism: string | null;
+  quotes_json: string;   // always present — DEFAULT '[]'
+  grounds_json: string;  // always present — DEFAULT '[]'
+  raw_text: string | null;
+  fetched_at: number | null;
+  content_hash: string;
+  updated_at: number;
+}
+
+/**
+ * Map a SQLite sources row → the `Source` UI type.
+ *
+ * `quotes`/`grounds` always parse to arrays (never undefined) because the
+ * column DEFAULT is '[]'. This gives callers a clean round-trip: writing an
+ * empty-array Source yields [] back on read, not undefined.
+ */
+function rowToSource(row: SourcesRow): Source {
+  return {
+    id: row.id,
+    kind: row.kind as SourceKind,
+    title: row.title,
+    url: row.url ?? undefined,
+    author: row.author ?? undefined,
+    cluster: row.cluster ?? undefined,
+    summary: row.summary ?? undefined,
+    thesis: row.thesis ?? undefined,
+    mechanism: row.mechanism ?? undefined,
+    // Always-array: DEFAULT '[]' means JSON.parse is always safe here.
+    quotes: JSON.parse(row.quotes_json) as string[],
+    grounds: JSON.parse(row.grounds_json) as string[],
+    raw_text: row.raw_text || undefined,
+    fetched_at: row.fetched_at ?? undefined,
+    content_hash: row.content_hash,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Phase 3 helper — does the on-disk file backing this (kind, id) currently exist?
@@ -108,7 +157,9 @@ export interface CmsIndex {
    *  flashcards review. Sidecar remains the source of truth (writes flow
    *  through `getStateStore(dir).write` + `reindexState()`). */
   getFullState(): TutorState;
-  getSources(): SourceRowsAsRendered[];
+  getSources(): Source[];
+  getSourceById(id: string): Source | undefined;
+  getSourcesForModule(moduleId: string): Source[];
 
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
   reindexEntity(kind: EntityKind, id: string): Promise<ReindexResult>;
@@ -172,6 +223,23 @@ export async function getCmsIndex(
     runMigrations(db);
     s = { dir, dbPath, db, fs };
     singletons.set(key, s);
+
+    // Ensure _sources.json exists before the first lazyRefresh so the indexer
+    // has a JSON to read on cold boot for dirs that only have a hand-authored
+    // _sources.md. We do NOT forward the injected FsLike here — it may be a
+    // read-only stub (used in tests for the indexer path) that has no write
+    // primitives. ensureSourcesJson always touches real disk; the injected fs
+    // is only for the indexer's read side.
+    // Wrapped in try/catch so a broken _sources.md never kills the entire CMS —
+    // we log + continue. getSources() will return [] in that case; the user can
+    // fix the .md and restart.
+    try {
+      await ensureSourcesJson(dir);
+    } catch (err) {
+      console.warn(
+        `[cms.getCmsIndex] ensureSourcesJson failed for ${dir}: ${err instanceof Error ? err.message : String(err)} — continuing without migrating _sources.md`,
+      );
+    }
   }
 
   await lazyRefresh(s);
@@ -454,14 +522,29 @@ function makeIndex(s: Singleton): CmsIndex {
       return selectFullState(db);
     },
 
-    getSources() {
-      // Phase 1: the `sources` table is empty (Phase 4 will populate from
-      // _sources.json). Returning [] keeps the read API shape stable now.
+    getSources(): Source[] {
       return (
         db
-          .prepare('SELECT id, title, url, summary FROM sources ORDER BY id')
-          .all() as { id: string; title: string; url: string | null; summary: string | null }[]
-      ).map((r) => r);
+          .prepare('SELECT * FROM sources ORDER BY id ASC')
+          .all() as SourcesRow[]
+      ).map(rowToSource);
+    },
+
+    getSourceById(id: string): Source | undefined {
+      const row = db
+        .prepare('SELECT * FROM sources WHERE id = ?')
+        .get(id) as SourcesRow | undefined;
+      return row ? rowToSource(row) : undefined;
+    },
+
+    getSourcesForModule(moduleId: string): Source[] {
+      return (
+        db
+          .prepare(
+            'SELECT s.* FROM sources s INNER JOIN module_sources ms ON ms.source_id = s.id WHERE ms.module_id = ? ORDER BY s.id ASC',
+          )
+          .all(moduleId) as SourcesRow[]
+      ).map(rowToSource);
     },
 
     async reindexEntity(kind, id): Promise<ReindexResult> {

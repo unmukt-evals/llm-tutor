@@ -5,6 +5,7 @@
 'use client';
 
 import type { Candidate, VerificationReport } from '@/lib/llm/types';
+import type { SourceInput } from '@/lib/source/apply-source';
 
 /** Extract the server's `{error}` message from a non-2xx response, if present. */
 async function errMsg(res: Response, prefix: string): Promise<string> {
@@ -63,15 +64,24 @@ export async function postVerify(
   return ((await res.json()) as { report: VerificationReport }).report;
 }
 
-/** POST a candidate to be re-validated + atomically written (the ONLY write). */
+/**
+ * POST a candidate to be re-validated + atomically written (the ONLY write).
+ *
+ * @param candidate      The candidate to apply.
+ * @param moduleFileName The file to write the module markdown to, or null.
+ * @param source         Optional source metadata to persist as a Source entity
+ *                       alongside the module. Legacy callers that omit it keep
+ *                       working — the source is simply not recorded.
+ */
 export async function postApply(
   candidate: Candidate,
   moduleFileName: string | null,
+  source?: SourceInput,
 ): Promise<{ moduleFile: string; poolFile: string }> {
   const res = await fetch('/api/source/apply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ candidate, moduleFileName }),
+    body: JSON.stringify({ candidate, moduleFileName, source }),
   });
   if (!res.ok) throw new Error(await errMsg(res, 'postApply'));
   return ((await res.json()) as { written: { moduleFile: string; poolFile: string } }).written;
