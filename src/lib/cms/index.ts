@@ -25,12 +25,60 @@ import type {
   MCQPool,
   Module,
   ModuleState,
-  SourceRowsAsRendered,
   TutorState,
 } from '@/lib/cms/types';
-import type { TrackId } from '@/lib/types';
+import type { Source, SourceKind, TrackId } from '@/lib/types';
 
 const CACHE_FILE = '.llmtutor-cache.sqlite';
+
+// ── Source read helpers ───────────────────────────────────────────────────────
+
+/** Raw SQLite row shape for the `sources` table (all TEXT / INTEGER columns). */
+interface SourcesRow {
+  id: string;
+  kind: string;
+  title: string;
+  url: string | null;
+  author: string | null;
+  cluster: string | null;
+  summary: string | null;
+  thesis: string | null;
+  mechanism: string | null;
+  quotes_json: string;   // always present — DEFAULT '[]'
+  grounds_json: string;  // always present — DEFAULT '[]'
+  raw_text: string | null;
+  fetched_at: number | null;
+  content_hash: string;
+  updated_at: number;
+}
+
+/**
+ * Map a SQLite sources row → the `Source` UI type.
+ *
+ * `quotes`/`grounds` always parse to arrays (never undefined) because the
+ * column DEFAULT is '[]'. This gives callers a clean round-trip: writing an
+ * empty-array Source yields [] back on read, not undefined.
+ */
+function rowToSource(row: SourcesRow): Source {
+  return {
+    id: row.id,
+    kind: row.kind as SourceKind,
+    title: row.title,
+    url: row.url ?? undefined,
+    author: row.author ?? undefined,
+    cluster: row.cluster ?? undefined,
+    summary: row.summary ?? undefined,
+    thesis: row.thesis ?? undefined,
+    mechanism: row.mechanism ?? undefined,
+    // Always-array: DEFAULT '[]' means JSON.parse is always safe here.
+    quotes: JSON.parse(row.quotes_json) as string[],
+    grounds: JSON.parse(row.grounds_json) as string[],
+    raw_text: row.raw_text || undefined,
+    fetched_at: row.fetched_at ?? undefined,
+    content_hash: row.content_hash,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Phase 3 helper — does the on-disk file backing this (kind, id) currently exist?
@@ -108,7 +156,9 @@ export interface CmsIndex {
    *  flashcards review. Sidecar remains the source of truth (writes flow
    *  through `getStateStore(dir).write` + `reindexState()`). */
   getFullState(): TutorState;
-  getSources(): SourceRowsAsRendered[];
+  getSources(): Source[];
+  getSourceById(id: string): Source | undefined;
+  getSourcesForModule(moduleId: string): Source[];
 
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
   reindexEntity(kind: EntityKind, id: string): Promise<ReindexResult>;
@@ -454,14 +504,29 @@ function makeIndex(s: Singleton): CmsIndex {
       return selectFullState(db);
     },
 
-    getSources() {
-      // Phase 1: the `sources` table is empty (Phase 4 will populate from
-      // _sources.json). Returning [] keeps the read API shape stable now.
+    getSources(): Source[] {
       return (
         db
-          .prepare('SELECT id, title, url, summary FROM sources ORDER BY id')
-          .all() as { id: string; title: string; url: string | null; summary: string | null }[]
-      ).map((r) => r);
+          .prepare('SELECT * FROM sources ORDER BY id ASC')
+          .all() as SourcesRow[]
+      ).map(rowToSource);
+    },
+
+    getSourceById(id: string): Source | undefined {
+      const row = db
+        .prepare('SELECT * FROM sources WHERE id = ?')
+        .get(id) as SourcesRow | undefined;
+      return row ? rowToSource(row) : undefined;
+    },
+
+    getSourcesForModule(moduleId: string): Source[] {
+      return (
+        db
+          .prepare(
+            'SELECT s.* FROM sources s INNER JOIN module_sources ms ON ms.source_id = s.id WHERE ms.module_id = ? ORDER BY s.id ASC',
+          )
+          .all(moduleId) as SourcesRow[]
+      ).map(rowToSource);
     },
 
     async reindexEntity(kind, id): Promise<ReindexResult> {
