@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import type { Source } from '@/lib/types';
 import type { SourcesDoc } from '@/lib/cms/types';
 import type { FsLike } from '@/lib/cms/indexer';
-import { computeContentHash } from '@/lib/cms/hash';
+import { canonicalHashInput, computeSourceHash } from '@/lib/cms/sources/source-hash';
 
 // ── Writable FS interface (extends the read-only FsLike from indexer) ────────
 
@@ -78,37 +78,6 @@ function normalizeSourceKeyOrder(s: Source): Record<string, unknown> {
     }
   }
   return out;
-}
-
-// ── content_hash canonical input ─────────────────────────────────────────────
-//
-// sha256 hex of JSON.stringify({kind,title,url,author,cluster,summary,thesis,
-// mechanism,quotes,grounds,raw_text,fetched_at}) — same fixed key order, so
-// the hash is independent of how the caller constructed the Source.
-
-const HASH_KEY_ORDER: ReadonlyArray<keyof Source> = [
-  'kind',
-  'title',
-  'url',
-  'author',
-  'cluster',
-  'summary',
-  'thesis',
-  'mechanism',
-  'quotes',
-  'grounds',
-  'raw_text',
-  'fetched_at',
-];
-
-function canonicalHashInput(s: Source): string {
-  const obj: Record<string, unknown> = {};
-  for (const key of HASH_KEY_ORDER) {
-    if (key in s && s[key] !== undefined) {
-      obj[key] = s[key];
-    }
-  }
-  return JSON.stringify(obj);
 }
 
 // ── loadSourcesJson ───────────────────────────────────────────────────────────
@@ -186,7 +155,7 @@ export async function writeSourcesJson(
     if (hasBoth) return s;
     return {
       ...s,
-      content_hash: s.content_hash ?? computeContentHash(canonicalHashInput(s)),
+      content_hash: s.content_hash ?? computeSourceHash(s),
       updated_at: s.updated_at ?? Date.now(),
     };
   });

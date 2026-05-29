@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSourcesMd } from '../migrate-from-md';
 
@@ -26,10 +26,11 @@ describe('parseSourcesMd', () => {
     const doc = parseSourcesMd(FIXTURE_RAW, { now: NOW_MS });
 
     expect(doc.version).toBe(1);
-    expect(doc.sources).toHaveLength(4);
+    // Extended fixture now contains: S2, S4, S5, S8 (parent), S8a, S8b, S9a
+    expect(doc.sources).toHaveLength(7);
 
     const ids = doc.sources.map((s) => s.id);
-    expect(ids).toEqual(['S2', 'S4', 'S5', 'S9a']);
+    expect(ids).toEqual(['S2', 'S4', 'S5', 'S8', 'S8a', 'S8b', 'S9a']);
   });
 
   // ── Test 2: Field extraction ──────────────────────────────────────────────
@@ -135,8 +136,12 @@ describe('parseSourcesMd', () => {
       expect(typeof s.content_hash).toBe('string');
       expect(s.content_hash.length).toBeGreaterThan(0);
       expect(s.updated_at).toBe(NOW_MS);
-      // All fixture sources have URLs → kind should be 'url'
-      expect(s.kind).toBe('url');
+      // S8 parent has no URL → kind is 'doc'; all others have URLs → kind is 'url'
+      if (s.id === 'S8') {
+        expect(s.kind).toBe('doc');
+      } else {
+        expect(s.kind).toBe('url');
+      }
     }
   });
 
@@ -238,4 +243,111 @@ describe('parseSourcesMd', () => {
     expect(grounds).toContain('B1');
     expect(grounds).toContain('B2');
   });
+
+  // ── S8 bold pseudo-heading tests (fixture-based) ─────────────────────────
+
+  it('S8 parent — present in fixture with correct cluster and no URL', () => {
+    const doc = parseSourcesMd(FIXTURE_RAW, { now: NOW_MS });
+    const s8 = doc.sources.find((s) => s.id === 'S8');
+    expect(s8).toBeDefined();
+    expect(s8!.cluster).toBe('Cluster 4 — Simulation infrastructure (long-horizon agent eval)');
+    // Parent S8 has no URL bullet or inline URL
+    expect(s8!.url).toBeUndefined();
+    expect(s8!.kind).toBe('doc');
+  });
+
+  it('S8a — parsed from bold pseudo-heading; url from inline dash trailer', () => {
+    const doc = parseSourcesMd(FIXTURE_RAW, { now: NOW_MS });
+    const idSet = doc.sources.map((s) => s.id);
+    expect(idSet).toContain('S8a');
+
+    const s8a = doc.sources.find((s) => s.id === 'S8a')!;
+    // URL must come from the inline "— https://…" trailer, not a bullet
+    expect(s8a.url).toBe(
+      'https://blog.collinear.ai/p/simlab-the-self-serve-staging-playground',
+    );
+    // "The thesis to keep" label must map to thesis
+    expect(s8a.thesis).toBeTruthy();
+    expect(s8a.thesis).toContain('Software has staging');
+    // mechanism must be populated
+    expect(s8a.mechanism).toBeTruthy();
+    // quote must be captured
+    expect(s8a.quotes).toBeDefined();
+    expect(s8a.quotes!.length).toBeGreaterThan(0);
+    expect(s8a.quotes![0]).toContain('nondeterministic');
+  });
+
+  it('S8b — parsed from bold pseudo-heading; Mechanism label with em-dash maps to mechanism', () => {
+    const doc = parseSourcesMd(FIXTURE_RAW, { now: NOW_MS });
+    const idSet = doc.sources.map((s) => s.id);
+    expect(idSet).toContain('S8b');
+
+    const s8b = doc.sources.find((s) => s.id === 'S8b')!;
+    expect(s8b.url).toBe('https://blog.collinear.ai/p/the-case-for-simulations');
+    // Thesis bullet — standard label
+    expect(s8b.thesis).toBeTruthy();
+    expect(s8b.thesis).toContain('Vibe tests');
+    // "Mechanism — the recipe of a simulation = …" label must map to mechanism field;
+    // the VALUE (after the closing **) is the body text starting with "Collinear's bet…"
+    expect(s8b.mechanism).toBeTruthy();
+    expect(s8b.mechanism).toContain("Collinear's bet");
+    // Two annotated Quote bullets: "Quote (the chain…)" and "Quote (customer voice)"
+    expect(s8b.quotes).toBeDefined();
+    expect(s8b.quotes!.length).toBe(2);
+    expect(s8b.quotes![0]).toContain('Simulations drive evals');
+    expect(s8b.quotes![1]).toContain('graded answers');
+  });
+});
+
+// ── Smoke test against the live _sources.md ──────────────────────────────────
+
+const LIVE_FILE_PATH =
+  '/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_sources.md';
+
+describe('parseSourcesMd — smoke against live _sources.md', () => {
+  it.skipIf(!existsSync(LIVE_FILE_PATH))(
+    'parses the real file: count, ids, fields, hashes',
+    () => {
+      const raw = readFileSync(LIVE_FILE_PATH, 'utf8');
+      const doc = parseSourcesMd(raw, { now: NOW_MS });
+
+      // At minimum the 8 named ### sources + 4 S8 sub-letters + 1 S9b = 13
+      // plus optional new sources — tolerant window:
+      expect(doc.sources.length).toBeGreaterThanOrEqual(12);
+      expect(doc.sources.length).toBeLessThanOrEqual(20);
+
+      // Every parsed source has non-empty id + non-empty content_hash
+      for (const s of doc.sources) {
+        expect(s.id.trim()).not.toBe('');
+        expect(s.content_hash.trim()).not.toBe('');
+      }
+
+      const idSet = doc.sources.map((s) => s.id);
+
+      // S8 fix: all four bold sub-entries must be present
+      expect(idSet).toContain('S8a');
+      expect(idSet).toContain('S8b');
+      expect(idSet).toContain('S8c');
+      expect(idSet).toContain('S8d');
+
+      // Other known IDs must also be present
+      for (const id of ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9a', 'S9b']) {
+        expect(idSet).toContain(id);
+      }
+
+      // Every source except the S8 parent (field-less intro block) must have
+      // at least one content field populated
+      for (const s of doc.sources) {
+        if (s.id === 'S8') continue; // parent S8 is legitimately field-less
+        const hasField =
+          s.url != null ||
+          s.summary != null ||
+          s.thesis != null ||
+          s.mechanism != null ||
+          (s.quotes != null && s.quotes.length > 0) ||
+          (s.grounds != null && s.grounds.length > 0);
+        expect(hasField, `source ${s.id} has no content fields`).toBe(true);
+      }
+    },
+  );
 });

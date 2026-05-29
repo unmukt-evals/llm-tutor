@@ -49,6 +49,24 @@ Two of the nine (RL-environments guide, Collinear post) are JS-gated and were re
 
 ---
 
+## Cluster 4 — Simulation infrastructure (long-horizon agent eval)
+
+### S8 · Collinear's simulation work — four posts (bodies captured 2026-05-26)
+The Collinear blog (Nazneen Rajani's team) is the most TrustEvals-shaped body of writing in this library — it argues, in their words, the exact thesis you're building. Four posts:
+
+**S8a · SimLab: the self-serve staging playground for real-world agents** (Sachin, Apr 2026) — https://blog.collinear.ai/p/simlab-the-self-serve-staging-playground
+- **The thesis to keep:** *"Software has staging. Agents have nothing between evals and prod."* The software pipeline is develop→test→**staging**→prod; the agent pipeline today is build→evals→prod with no staging — so *"the first time your agent hits a live API with real latency, a real 200-step workflow… is the first time a real user hits it too."* **"Simulation is the staging layer for agents."**
+- **Mechanism:** the failure modes that actually ship — *"Irregular tool call arguments. Right function, bad payload. Fails schema validation. Retries with the same bad payload."* · silent **state drift** (working context diverges from ground truth mid-workflow, compounds by step 8) · **no-exit loops** (dead end, no recovery, retries the same action). *"Evals test outputs. They don't test behavior."*
+- **Quote:** *"LLM-as-judge makes this worse. You're using a nondeterministic model to grade a nondeterministic system."*
+
+**S8b · The case for simulations** (Soumyadeep Bakshi, Oct 2025) — https://blog.collinear.ai/p/the-case-for-simulations
+- **Thesis:** *"Vibe tests aren't the answer."* Evals are *"the window into your AI agent's mind."* *"AI Agents aren't linear — so, your evals can't be either"* — nondeterministic agents make the test-case permutations scale exponentially, not linearly.
+- **Mechanism — the recipe of a simulation = user + agent + judge.** Collinear's bet is on the **user**: steerable persona-driven users (persona × intent × demographic). **TraitBasis / τ-Trait** = *activation-level conditioning*.
+- **Quote (the chain that is your pitch):** *"Simulations drive evals. Evals drive trust. And trust drives value."*
+- **Quote (customer voice):** *"Before simulations, we graded answers. Now we grade behavior… It's become our CI for AI." — Head of AI, Fortune 500 Financial Services."*
+
+---
+
 ## Cluster 5 — Mechanistic interpretability (looking inside the model)
 
 ### S9a · Scaling Monosemanticity — Anthropic / Transformer Circuits (Templeton, Conerly, et al.; Olah)

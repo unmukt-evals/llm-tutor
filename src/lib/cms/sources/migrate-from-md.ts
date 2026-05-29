@@ -31,55 +31,48 @@
 
 import type { Source, SourceKind } from '@/lib/types';
 import type { SourcesDoc } from '@/lib/cms/types';
-import { computeContentHash } from '@/lib/cms/hash';
-
-// ── Canonical hash input (mirrors json-store.ts HASH_KEY_ORDER) ──────────────
-
-const HASH_KEY_ORDER: ReadonlyArray<keyof Source> = [
-  'kind',
-  'title',
-  'url',
-  'author',
-  'cluster',
-  'summary',
-  'thesis',
-  'mechanism',
-  'quotes',
-  'grounds',
-  'raw_text',
-  'fetched_at',
-];
-
-function canonicalHashInput(s: Partial<Source>): string {
-  const obj: Record<string, unknown> = {};
-  for (const key of HASH_KEY_ORDER) {
-    const val = (s as Record<string, unknown>)[key];
-    if (val !== undefined) {
-      obj[key] = val;
-    }
-  }
-  return JSON.stringify(obj);
-}
+import { computeSourceHash } from '@/lib/cms/sources/source-hash';
 
 // ── Bullet label → Source field mapping ──────────────────────────────────────
 
 type BulletKind = 'url' | 'what' | 'thesis' | 'mechanism' | 'quote' | 'grounds';
 
 /** Regex that matches a bullet line and captures the label and value.
- *  Group 1 = label text (e.g. "URL", "What", "Mechanism that matters").
- *  Group 2 = value text (everything after ": ", may be empty). */
-const BULLET_RE = /^- \*\*(URL|What|Thesis|Mechanism that matters|Quote[^*]*|Grounds):\*\*\s*(.*)/;
+ *  Group 1 = label text (e.g. "URL", "What", "Mechanism that matters",
+ *            "The thesis to keep", "Mechanism — …", "Quote (…)").
+ *  Group 2 = value text (everything after ": " or "** ", may be empty).
+ *
+ *  The pattern is intentionally liberal:
+ *   - Label = any sequence of non-`*` chars (including parenthetical annotations
+ *     and em-dash + prose for Mechanism variant labels).
+ *   - Terminator = `:**` (standard) or `** ` without colon (label-only bold lines
+ *     like `**Mechanism — …** text`).
+ */
+const BULLET_RE = /^- \*\*([^*]+?)(?::\*\*|\*\*:?)\s*(.*)/;
 
-function labelToBulletKind(label: string): BulletKind | null {
+/**
+ * Map a bullet label string to its BulletKind.
+ *
+ * Handles all known variants including S8 sub-block irregular labels:
+ *   - "The thesis to keep" → thesis
+ *   - "Mechanism — …" (em-dash + prose in label) → mechanism
+ *   - "Quote (the chain that is your pitch)" → quote
+ *   - "Quote (customer voice)" → quote
+ */
+function resolveBulletKind(label: string): BulletKind | null {
   const l = label.trim();
   if (l === 'URL') return 'url';
   if (l === 'What') return 'what';
-  if (l === 'Thesis' || l.startsWith('Thesis')) return 'thesis';
-  if (l === 'Mechanism that matters') return 'mechanism';
+  if (l.startsWith('Thesis')) return 'thesis';
+  if (l === 'The thesis to keep') return 'thesis';
+  if (l.startsWith('Mechanism')) return 'mechanism';
   if (l.startsWith('Quote')) return 'quote';
   if (l === 'Grounds') return 'grounds';
   return null;
 }
+
+// Keep the old name as an alias so existing call-sites don't need changing.
+const labelToBulletKind = resolveBulletKind;
 
 // ── Source heading parser ─────────────────────────────────────────────────────
 
@@ -136,6 +129,34 @@ function parseClusterHeading(line: string): string | null {
   // Ignore the "Source → module map" section and anything that isn't a cluster
   if (!name) return null;
   return name;
+}
+
+// ── Bold pseudo-heading parser ────────────────────────────────────────────────
+//
+// S8-style lines:  **S8a · SimLab: …** (author, date) — https://…
+// Pattern:  **<id> · <title>** optional-trailer
+// The URL trailer (after " — ") is optional; when present it is captured so the
+// caller can set source.url directly without needing a "- **URL:**" bullet.
+
+// Matches: **S8a · <title>** <optional trailer text> [— <url>]
+// The URL is the last non-whitespace token after an em-dash (—) in the trailer.
+// A parenthetical author/date like "(Sachin, Apr 2026)" may appear before the dash.
+const BOLD_SOURCE_HEADING_RE =
+  /^\*\*(S[0-9]+[a-z]?)\s+·\s+(.+?)\*\*\s*(?:[^—]*(?:—\s*(\S+)))?\s*$/;
+
+/** Parse a bold pseudo-heading line like `**S8a · SimLab: …** — https://…`.
+ *
+ * Returns `{ id, title, url? }` when matched, or `null` otherwise.
+ */
+function parseBoldSourceHeading(
+  line: string,
+): { id: string; title: string; url?: string } | null {
+  const m = line.match(BOLD_SOURCE_HEADING_RE);
+  if (!m) return null;
+  const id = m[1];
+  const title = m[2].trim();
+  const url = m[3] ?? undefined;
+  return { id, title, url };
 }
 
 // ── In-progress source accumulator ───────────────────────────────────────────
@@ -280,7 +301,7 @@ function flushSource(partial: PartialSource, updatedAt: number): Source {
     ...(grounds.length > 0 && { grounds }),
   };
 
-  const content_hash = computeContentHash(canonicalHashInput(forHash));
+  const content_hash = computeSourceHash(forHash);
 
   const source: Source = {
     id: partial.id,
@@ -365,6 +386,24 @@ export function parseSourcesMd(raw: string, opts?: ParseOpts): SourcesDoc {
         current = null;
       }
       continue;
+    }
+
+    // Bold pseudo-heading (S8a–style): **S<id> · <title>** [— url]
+    // Must be tested BEFORE bullet detection because the line starts with "**".
+    if (trimmed.startsWith('**S')) {
+      const boldParsed = parseBoldSourceHeading(trimmed);
+      if (boldParsed) {
+        // Flush previous source
+        if (current) {
+          sources.push(flushSource(current, updatedAt));
+        }
+        current = makePartial(boldParsed.id, boldParsed.title, currentCluster);
+        // Inline URL from the pseudo-heading (e.g. "— https://…")
+        if (boldParsed.url) {
+          current.url = boldParsed.url;
+        }
+        continue;
+      }
     }
 
     // No current source in progress → skip
