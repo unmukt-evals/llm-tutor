@@ -8,6 +8,12 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
   },
   resolve: {
-    alias: { '@': resolve(__dirname, './src') },
+    alias: {
+      '@': resolve(__dirname, './src'),
+      // `server-only` throws by default; under Vitest's Node env our server
+      // modules (e.g. src/lib/cms/db.ts) are exercised directly, so route the
+      // import to the package's React-server-condition no-op.
+      'server-only': resolve(__dirname, './node_modules/server-only/empty.js'),
+    },
   },
 });
