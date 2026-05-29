@@ -625,6 +625,139 @@ export function selectModuleState(db: BSDatabase, id: string): ModuleState {
   };
 }
 
+// ── Batch indexer ───────────────────────────────────────────────────────────
+
+/** Per-file error report yielded by `indexAll`. `kind` is the entity kind we
+ *  attempted; `id` is the best-known identifier (frontmatter id, basename, or
+ *  the filename itself when the id could not be resolved). */
+export interface IndexAllError {
+  kind: EntityKind;
+  id: string;
+  error: string;
+}
+
+/** Summary report from a full-curriculum index pass. */
+export interface IndexAllReport {
+  indexed: number;
+  skipped: number;
+  errors: IndexAllError[];
+}
+
+/**
+ * Full curriculum sweep — mirrors the four on-disk surfaces the learner reads:
+ *   1. every top-level `*.md` (skipping `_`-prefixed sidecars) → indexEntity('module', id)
+ *      where `id` is read from the file's frontmatter `module_id` (parseModule).
+ *   2. every `mcq/*.json` → indexEntity('pool', basename-without-`.json`)
+ *   3. `_flashcards.md` if present → indexEntity('flashcards', '_flashcards')
+ *   4. `_llmtutor-state.json` (or defaults) → indexState
+ *
+ * Per-file failures are collected into `errors` and surfaced as `console.warn`
+ * — one broken file does NOT abort the batch (mirrors CurriculumRepositoryImpl).
+ * Returns `{indexed, skipped, errors}` so callers (Phase 3 API routes, the
+ * factory's lazy refresh in Task 12) can report progress without re-walking.
+ */
+export async function indexAll(
+  db: BSDatabase,
+  dir: string,
+  fs: FsLike = defaultFs,
+): Promise<IndexAllReport> {
+  const errors: IndexAllError[] = [];
+  let indexed = 0;
+  let skipped = 0;
+
+  // Snapshot index_rows so we can detect no-op (skipped) entries by comparing
+  // `indexed_at` before / after each `indexEntity` / `indexState` call.
+  const snapshot = (kind: EntityKind, id: string): number | undefined => {
+    const row = db
+      .prepare('SELECT indexed_at FROM index_rows WHERE kind = ? AND entity_id = ?')
+      .get(kind, id) as { indexed_at: number } | undefined;
+    return row?.indexed_at;
+  };
+
+  // 1. Modules — read each markdown file once, parse its frontmatter to get the
+  //    id, then call indexEntity('module', id) which reparses the same bytes.
+  //    The double-parse is microseconds and keeps indexEntity's contract simple
+  //    (it owns its own file read for hash-skip semantics).
+  const top = await fs.readdir(dir);
+  const moduleFiles = top.filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort();
+  for (const f of moduleFiles) {
+    let id: string | null = null;
+    try {
+      const raw = await fs.readFile(join(dir, f));
+      const peek = parseModule(raw);
+      if (!peek.id) {
+        // .md without a module_id is fine (e.g. a README); skip silently — this
+        // matches CurriculumRepositoryImpl's behavior.
+        continue;
+      }
+      id = peek.id;
+      const before = snapshot('module', id);
+      await indexEntity(db, dir, 'module', id, fs);
+      const after = snapshot('module', id);
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const reportedId = id ?? f;
+      console.warn(`[cms.indexAll] skipping module file ${f}: ${msg}`);
+      errors.push({ kind: 'module', id: reportedId, error: msg });
+    }
+  }
+
+  // 2. Pools — id is the basename without `.json`.
+  let mcqEntries: string[] = [];
+  try {
+    mcqEntries = await fs.readdir(join(dir, 'mcq'));
+  } catch {
+    // No mcq/ directory is fine (state-only curriculum, brand-new dir, etc.).
+  }
+  for (const f of mcqEntries.filter((n) => n.endsWith('.json')).sort()) {
+    const id = f.replace(/\.json$/, '');
+    try {
+      const before = snapshot('pool', id);
+      await indexEntity(db, dir, 'pool', id, fs);
+      const after = snapshot('pool', id);
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[cms.indexAll] skipping pool ${id}: ${msg}`);
+      errors.push({ kind: 'pool', id, error: msg });
+    }
+  }
+
+  // 3. Flashcards (single _flashcards.md if present).
+  if (top.includes('_flashcards.md')) {
+    try {
+      const before = snapshot('flashcards', '_flashcards');
+      await indexEntity(db, dir, 'flashcards', '_flashcards', fs);
+      const after = snapshot('flashcards', '_flashcards');
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[cms.indexAll] skipping _flashcards.md: ${msg}`);
+      errors.push({ kind: 'flashcards', id: '_flashcards', error: msg });
+    }
+  }
+
+  // 4. State — always run; JsonStateStore.read() returns defaults on missing
+  //    sidecar so we never throw here in practice.
+  try {
+    const before = snapshot('state', '_');
+    await indexState(db, dir, fs);
+    const after = snapshot('state', '_');
+    if (before !== undefined && after === before) skipped += 1;
+    else indexed += 1;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[cms.indexAll] skipping state: ${msg}`);
+    errors.push({ kind: 'state', id: '_', error: msg });
+  }
+
+  return { indexed, skipped, errors };
+}
+
 /** Read the cached app singleton — version + xp + streak + sessionLog. */
 export function selectAppState(
   db: BSDatabase,
