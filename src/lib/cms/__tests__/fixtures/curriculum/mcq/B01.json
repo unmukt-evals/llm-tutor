@@ -1,0 +1,47 @@
+{
+  "moduleId": "B01",
+  "questions": [
+    {
+      "id": "B01-q001",
+      "moduleId": "B01",
+      "difficulty": "easy",
+      "dimension": "topic",
+      "stem": "What does an eval harness primarily pin?",
+      "options": [
+        "Prompts, decoding params, and scoring",
+        "Only the prompt",
+        "Only the scoring",
+        "The model weights"
+      ],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "Conflates the prompt with the full harness.",
+        "2": "Confuses scoring with the harness as a whole.",
+        "3": "Mistakes the eval substrate for the model under test."
+      },
+      "explanation": "A harness pins prompts, decoding, and scoring so score deltas reflect capability.",
+      "sourceRef": "S4"
+    },
+    {
+      "id": "B01-q002",
+      "moduleId": "B01",
+      "difficulty": "medium",
+      "dimension": "logic",
+      "stem": "Why does the harness need to fix decoding parameters?",
+      "options": [
+        "So score deltas attribute to the model, not the sampler",
+        "So the model runs faster",
+        "So the prompt can be shorter",
+        "So humans can grade more easily"
+      ],
+      "correctIndex": 0,
+      "distractorMisconception": {
+        "1": "Confuses harness purpose with throughput.",
+        "2": "Wrong: prompt length is independent of decoding fixing.",
+        "3": "Confuses harness with grading affordances."
+      },
+      "explanation": "Floating decode params leak sampler-noise into score deltas.",
+      "sourceRef": "S5"
+    }
+  ]
+}
