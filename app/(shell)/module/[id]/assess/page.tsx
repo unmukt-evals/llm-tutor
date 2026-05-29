@@ -1,9 +1,9 @@
 // app/module/[id]/assess/page.tsx
 // Server component: MCQ diagnostic assessment page (plan-03 wiring).
 //
-// Loads the module's MCQ pool via the FileMCQRepository factory and the module's
-// persisted state via the StateStore, then hands both — as serializable props —
-// to the client <McqRunner/>, which owns the (already-tested) diagnostic engine.
+// Loads the module's MCQ pool + the module's persisted state via the CMS index
+// (Phase 2), then hands both — as serializable props — to the client
+// <McqRunner/>, which owns the (already-tested) diagnostic engine.
 //
 // Next 15: dynamic `params` is a Promise and must be awaited.
 //
@@ -15,8 +15,7 @@
 
 import Link from 'next/link';
 import { McqRunner } from '@/components/McqRunner';
-import { getMcqRepository } from '@/lib/mcq';
-import { getStateStore } from '@/lib/state';
+import { getCmsIndex } from '@/lib/cms';
 
 interface PageProps {
   // Next 15: dynamic route params are async.
@@ -39,10 +38,9 @@ export default async function AssessPage({ params }: PageProps) {
     );
   }
 
-  const [pool, moduleState] = await Promise.all([
-    getMcqRepository(curriculumDir).loadPool(id),
-    getStateStore(curriculumDir).getModule(id),
-  ]);
+  const cms = await getCmsIndex(curriculumDir);
+  const pool = cms.getPool(id);
+  const moduleState = cms.getModuleState(id);
 
   if (!pool) {
     return (

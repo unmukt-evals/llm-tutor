@@ -1,8 +1,9 @@
 // app/module/[id]/page.tsx
 // Server component: module reader (S-READER, plan-02 Task 9).
 //
-// Loads the curriculum via CurriculumRepository and finds the module by the
-// dynamic [id] segment. Next 15 makes `params` a Promise — it must be awaited.
+// Loads the module + its persisted state via the CMS index (Phase 2) and finds
+// the module by the dynamic [id] segment. Next 15 makes `params` a Promise — it
+// must be awaited.
 //
 // Renders the "Why this matters" stake banner (with a visible warning when the
 // module did not author one), an anchor card listing the module's anchor
@@ -17,8 +18,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ModuleReaderClient from '@/components/ModuleReaderClient';
-import { getCurriculumRepository } from '@/lib/ingest';
-import { getStateStore } from '@/lib/state';
+import { getCmsIndex } from '@/lib/cms';
 
 interface PageProps {
   // Next 15: dynamic route params are async.
@@ -41,13 +41,12 @@ export default async function ModuleReaderPage({ params }: PageProps) {
     );
   }
 
-  const repo = getCurriculumRepository();
-  const curriculum = await repo.load(curriculumDir);
-  const mod = curriculum.byId(id);
+  const cms = await getCmsIndex(curriculumDir);
+  const mod = cms.getModule(id);
   if (!mod) notFound();
 
   // Persisted module state — seeds the stress-test self-marks in the reader.
-  const moduleState = await getStateStore(curriculumDir).getModule(id);
+  const moduleState = cms.getModuleState(id);
 
   // `module` is the reserved word in some contexts; alias for clarity in JSX.
   const m = mod;
