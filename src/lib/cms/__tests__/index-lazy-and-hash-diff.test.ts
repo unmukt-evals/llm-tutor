@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtemp, rm, cp, writeFile, readFile, unlink } from 'node:fs/promises';
+import { mkdtemp, rm, cp, writeFile, readFile, unlink, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { getCmsIndex, __resetCmsIndexForTests } from '@/lib/cms/index';
 import * as parseModuleModule from '@/lib/ingest/parse-module';
+import { defaultFs, type FsLike } from '@/lib/cms/indexer';
 
 const FIXTURE_DIR = resolve(__dirname, 'fixtures/curriculum');
 
@@ -147,5 +148,103 @@ Scenario: A scenario.
     expect(cms2.getModule('B01')).toBeUndefined();
     expect(cms2.getPool('B01')).toBeNull();
     expect(cms2.getFlashcards()).toEqual([]);
+  });
+
+  // ── mtime-first short-circuit tests ──────────────────────────────────────
+  // These tests use the injectable FsLike edge to count readFile calls.
+  // A counting wrapper delegates to defaultFs for real IO and increments a
+  // counter every time readFile is called on a content file (not the sidecar).
+  //
+  // KEY CONSTRAINT: the singleton captures `fs` at creation time, so a fresh
+  // singleton is needed for each counting-FS observation. We use a real on-disk
+  // DB path so mtime_ms survives across __resetCmsIndexForTests() calls.
+
+  it('mtime-first: warm second getCmsIndex() call issues zero readFile calls for content files', async () => {
+    // Use a real on-disk DB so mtime_ms persists after __resetCmsIndexForTests().
+    const dbPath = join(dir, 'test-warm.sqlite');
+
+    // Cold start: real FS, writes mtime_ms into the on-disk DB.
+    await getCmsIndex(dir, { dbPath });
+    __resetCmsIndexForTests();
+
+    // Build a counting FS wrapper — only counts .md and .json content files,
+    // not the state sidecar (indexState always reads it for hash comparison).
+    let contentReadCount = 0;
+    const countingFs: FsLike = {
+      readFile: async (p: string) => {
+        const isContentFile =
+          (p.endsWith('.md') || p.endsWith('.json')) &&
+          !p.includes('_llmtutor-state') &&
+          !p.includes('_sources');
+        if (isContentFile) contentReadCount += 1;
+        return defaultFs.readFile(p);
+      },
+      stat: defaultFs.stat,
+      readdir: defaultFs.readdir,
+    };
+
+    // Warm start: same on-disk DB (mtime_ms is intact) + counting FS.
+    const cms2 = await getCmsIndex(dir, { dbPath, fs: countingFs });
+    expect(cms2.getCurriculum().modules.length).toBeGreaterThan(0);
+
+    // The warm path stat'd every file but found mtime_ms matches for each →
+    // no readFile on any content file.
+    expect(contentReadCount).toBe(0);
+  });
+
+  it('mtime-changed-but-content-unchanged: readFile fires but parseModule does NOT', async () => {
+    // On-disk DB so mtime_ms persists.
+    const dbPath = join(dir, 'test-mtime-bump.sqlite');
+    await getCmsIndex(dir, { dbPath });
+    __resetCmsIndexForTests();
+
+    // Bump mtime of the module file without changing bytes.
+    const b01Path = join(dir, 'B01-eval-harnesses.md');
+    const futureDate = new Date(Date.now() + 2000);
+    await utimes(b01Path, futureDate, futureDate);
+
+    const parseSpy = vi.spyOn(parseModuleModule, 'parseModule');
+    let moduleReadCount = 0;
+    const countingFs: FsLike = {
+      readFile: async (p: string) => {
+        if (p.endsWith('.md') && !p.includes('_flashcards') && !p.includes('_llmtutor')) {
+          moduleReadCount += 1;
+        }
+        return defaultFs.readFile(p);
+      },
+      stat: defaultFs.stat,
+      readdir: defaultFs.readdir,
+    };
+
+    // Warm start with bumped mtime: readFile fires for B01 (mtime differs) but
+    // the hash matches the cached row → parseModule must NOT fire.
+    const cms2 = await getCmsIndex(dir, { dbPath, fs: countingFs });
+    expect(cms2.getModule('B01')).toBeDefined();
+    expect(moduleReadCount).toBeGreaterThan(0);
+    expect(parseSpy.mock.calls.length).toBe(0);
+
+    parseSpy.mockRestore();
+  });
+
+  it('mtime-changed-and-content-changed: full reparse path still fires correctly', async () => {
+    // Cold start with the default on-disk DB for this tmp dir.
+    await getCmsIndex(dir);
+
+    const b01Path = join(dir, 'B01-eval-harnesses.md');
+    const original = await readFile(b01Path, 'utf8');
+    const mutated = original.replace(
+      'If your harness is wrong, every score downstream is a confident lie.',
+      'Updated line to force hash change and verify reparse fires.',
+    );
+    await writeFile(b01Path, mutated, 'utf8');
+
+    const parseSpy = vi.spyOn(parseModuleModule, 'parseModule');
+
+    // Second call via same singleton: mtime changed + hash changed → full reparse.
+    const cms2 = await getCmsIndex(dir);
+    expect(cms2.getModule('B01')?.whyThisMatters).toContain('verify reparse fires');
+    expect(parseSpy.mock.calls.length).toBeGreaterThan(0);
+
+    parseSpy.mockRestore();
   });
 });

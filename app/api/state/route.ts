@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { getStateStore } from '@/lib/state';
 import { deepSet } from '@/lib/state/deep-set';
+import { getCmsIndex } from '@/lib/cms';
 import type { TutorState } from '@/lib/types';
 
 // Never cache; state mutates and must be read fresh each request.
@@ -81,6 +82,18 @@ export async function PATCH(request: Request) {
     await store.write(updated);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+
+  // Phase 2: keep the SQLite mirror in sync with the just-written sidecar so
+  // subsequent reads via getCmsIndex().getFullState() / getModuleState() see
+  // the new state without waiting for the next lazyRefresh's hash recompute.
+  // The sidecar remains the source of truth — this is a cache refresh, and a
+  // mirror failure must NOT fail the write the client just succeeded at.
+  try {
+    const cms = await getCmsIndex(getCurriculumDir());
+    await cms.reindexState();
+  } catch (err) {
+    console.warn(`[api/state] reindexState failed (sidecar write succeeded): ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return NextResponse.json(updated);

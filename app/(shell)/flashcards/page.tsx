@@ -1,9 +1,10 @@
 // app/flashcards/page.tsx
 // Server component: flashcard review page (S-CARDS, plan-02 Task 10).
 //
-// Reads `_flashcards.md` from CURRICULUM_DIR, parses it, reads sidecar state via
-// the StateStore, computes the due cards with the pure `dueCards` helper, and
-// hands them as serializable props to the client <FlashcardReview/>.
+// Phase 2 (CMS reframe): the parsed deck + state both come from the CMS index.
+// `cms.getFlashcards()` returns the parsed Flashcard[] from the SQLite mirror
+// (no markdown re-parse on every click); `cms.getFullState()` assembles the
+// full TutorState whose `.flashcards` map drives the pure `dueCards` helper.
 //
 // Graceful empty states (never throws — that would break `next build`, which
 // renders this page):
@@ -11,11 +12,8 @@
 //   - missing _flashcards.md    → empty deck → "no cards due — come back later"
 //   - nothing due today         → same empty-deck message (from FlashcardReview)
 
-import { readFile } from 'fs/promises';
-import path from 'path';
 import FlashcardReview from '@/components/FlashcardReview';
-import { getStateStore } from '@/lib/state';
-import { parseFlashcards } from '@/lib/cards/parse-flashcards';
+import { getCmsIndex } from '@/lib/cms';
 import { dueCards } from '@/lib/cards/due-cards';
 
 export default async function FlashcardsPage() {
@@ -40,16 +38,10 @@ export default async function FlashcardsPage() {
     );
   }
 
-  const store = getStateStore(curriculumDir);
-  const flashcardsPath = path.join(curriculumDir, '_flashcards.md');
+  const cms = await getCmsIndex(curriculumDir);
+  const flashcards = cms.getFlashcards();
+  const state = cms.getFullState();
 
-  const [state, flashcardsRaw] = await Promise.all([
-    store.read(),
-    // Missing `_flashcards.md` (or any read error) → empty deck → 0 due.
-    readFile(flashcardsPath, 'utf-8').catch(() => ''),
-  ]);
-
-  const flashcards = parseFlashcards(flashcardsRaw);
   const due = dueCards(flashcards, state.flashcards);
 
   return (

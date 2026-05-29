@@ -5,6 +5,13 @@
 // The (shell) group adds NO URL segment, so /, /module/[id], /module/[id]/assess
 // and /flashcards keep their exact paths and inherit this shell.
 //
+// Phase 2 (CMS reframe): both reads flow through `getCmsIndex(curriculumDir)`.
+// Curriculum is served from the indexed SQLite mirror (O(1) joins instead of
+// 21-file markdown parse on every click); TutorState is assembled from the
+// mirror's `module_state` + `flashcard_state` + `app_state` tables. The
+// sidecar JSON remains the source of truth — `/api/state` PATCH writes it
+// and reindexes the mirror on the same request.
+//
 // CURRICULUM_DIR-unset guard mirrors the pages: when unset we render children
 // WITHOUT a sidebar (the child page shows its own friendly empty state) so
 // `next build` — which renders these routes — never throws.
@@ -14,8 +21,7 @@ import Sidebar from '@/components/Sidebar';
 import XpPop from '@/components/XpPop';
 import LevelUpFlourish from '@/components/LevelUpFlourish';
 import RouteTransition from '@/components/RouteTransition';
-import { getCurriculumRepository } from '@/lib/ingest';
-import { getStateStore } from '@/lib/state';
+import { getCmsIndex } from '@/lib/cms';
 import { buildSidebarModel } from '@/lib/ui/sidebar-model';
 import { masterySnapshot } from '@/lib/ui/juice';
 
@@ -27,10 +33,9 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     return <div className="min-h-screen bg-slate-50">{children}</div>;
   }
 
-  const [curriculum, state] = await Promise.all([
-    getCurriculumRepository().load(curriculumDir),
-    getStateStore(curriculumDir).read(),
-  ]);
+  const cms = await getCmsIndex(curriculumDir);
+  const curriculum = cms.getCurriculum();
+  const state = cms.getFullState();
   const groups = buildSidebarModel(curriculum, state);
   const initialMastery = masterySnapshot(state);
 

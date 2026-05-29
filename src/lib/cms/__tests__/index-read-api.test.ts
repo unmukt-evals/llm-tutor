@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { getCmsIndex, __resetCmsIndexForTests } from '@/lib/cms/index';
 import { getCurriculumRepository } from '@/lib/ingest';
-import { defaultModuleState } from '@/lib/state/defaults';
+import { getStateStore } from '@/lib/state';
+import { defaultModuleState, defaultTutorState } from '@/lib/state/defaults';
 
 const FIXTURE_DIR = resolve(__dirname, 'fixtures/curriculum');
 
@@ -48,10 +49,8 @@ describe('getCmsIndex read API', () => {
     expect(cms.getPool('NOPE')).toBeNull();
   });
 
-  it('getFlashcardsText returns the raw deck text; getFlashcards returns parsed rows', async () => {
+  it('getFlashcards returns parsed rows from the mirror', async () => {
     const cms = await getCmsIndex(dir, { dbPath: ':memory:' });
-    const text = cms.getFlashcardsText();
-    expect(text).toContain('module:B01');
     const cards = cms.getFlashcards();
     expect(cards.length).toBe(2);
     expect(cards[0]?.moduleId).toBe('B01');
@@ -70,6 +69,31 @@ describe('getCmsIndex read API', () => {
     expect(app.xp).toEqual({ total: 42, thisWeek: 7 });
     expect(app.streak.count).toBe(3);
     expect(Array.isArray(app.sessionLog)).toBe(true);
+  });
+
+  it('getFullState assembles app singleton + per-module + per-card mirror', async () => {
+    const cms = await getCmsIndex(dir, { dbPath: ':memory:' });
+    const full = cms.getFullState();
+    // App singleton fields (from fixture sidecar).
+    expect(full.version).toBe(1);
+    expect(full.xp).toEqual({ total: 42, thisWeek: 7 });
+    expect(full.streak.count).toBe(3);
+    // Per-module mirror.
+    expect(full.modules['B01']?.mastery).toBe('solid');
+    // Shape matches JsonStateStore.read() for the same dir.
+    const fromSidecar = await getStateStore(dir).read();
+    expect(full).toEqual(fromSidecar);
+  });
+
+  it('getFullState falls back to defaults when sidecar is missing', async () => {
+    const emptyDir = await mkdtemp(join(tmpdir(), 'cms-read-empty-full-'));
+    try {
+      const cms = await getCmsIndex(emptyDir, { dbPath: ':memory:' });
+      const full = cms.getFullState();
+      expect(full).toEqual(defaultTutorState());
+    } finally {
+      await rm(emptyDir, { recursive: true, force: true });
+    }
   });
 
   it('reindexEntity / reindexState / reindexAll are callable', async () => {
