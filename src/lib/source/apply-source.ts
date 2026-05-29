@@ -124,7 +124,10 @@ export async function applySourceToDir(
       fetched_at: now,
     };
 
-    // Compute hash BEFORE minting id (id is derived from hash for new sources)
+    // Compute hash BEFORE minting id (id is derived from hash for new sources).
+    // We must also set content_hash and updated_at here — writeSourcesJson's
+    // normalization guard is `s.content_hash != null && s.updated_at != null`,
+    // so '' and 0 both pass the guard and persist on disk unchanged.
     const hash = computeSourceHash(partialSource);
     const id = existingSource?.id ?? `src_${hash.slice(0, 8)}`;
 
@@ -135,8 +138,8 @@ export async function applySourceToDir(
       url: input.url,
       raw_text: input.text,
       fetched_at: now,
-      content_hash: '', // writeSourcesJson will recompute
-      updated_at: 0,    // writeSourcesJson will set
+      content_hash: hash,
+      updated_at: now,
     };
 
     // Upsert: replace existing entry (same id) or append
@@ -147,14 +150,12 @@ export async function applySourceToDir(
       doc.sources.push(source);
     }
 
-    // Persist updated doc (writeSourcesJson fills content_hash + updated_at)
+    // Persist updated doc (content_hash + updated_at are already set above)
     await writeSourcesJson(dir, doc);
 
-    // Re-load to get the normalized doc with computed hashes for md rendering
-    const normalizedDoc = await loadSourcesJson(dir);
-
-    // Render and write the .md mirror (skipping write if byte-identical)
-    await writeMdMirror(dir, normalizedDoc);
+    // Render and write the .md mirror using the in-memory doc (skipping write
+    // if byte-identical — no reload needed since we have fully-populated fields)
+    await writeMdMirror(dir, doc);
 
     // Propagate to SQLite cache
     await reindexAffected(dir, 'source', '_sources');
