@@ -350,7 +350,53 @@ describe('round-trip: writeSourcesJson → indexer → getSources()', () => {
   });
 });
 
-// ── 5. Task 9 — ensureSourcesJson called in bootstrap ────────────────────────
+// ── 5. getModulesForSource() ──────────────────────────────────────────────────
+
+describe('getModulesForSource()', () => {
+  it('returns the modules that cite a source, ordered by id', async () => {
+    // Arrange: a curriculum dir with S1, S2 sources + module B02 citing both.
+    const tmp = await mkdtemp(join(tmpdir(), 'cms-modules-for-source-'));
+    __resetCmsIndexForTests();
+    try {
+      const s1 = makeSource({ id: 'S1', title: 'Source One' });
+      const s2 = makeSource({ id: 'S2', title: 'Source Two' });
+      const doc = makeDoc([s1, s2]);
+
+      await writeFile(join(tmp, '_sources.json'), JSON.stringify(doc), 'utf8');
+      // B02_MD cites both S1 and S2 (defined above)
+      await writeFile(join(tmp, 'B02-test-module-b02.md'), B02_MD, 'utf8');
+
+      const cms = await getCmsIndex(tmp, { dbPath: ':memory:' });
+
+      // S1 is cited by B02
+      const mods = cms.getModulesForSource('S1');
+      expect(mods).toHaveLength(1);
+      expect(mods[0].id).toBe('B02');
+      expect(mods[0].name).toBe('Test Module B02');
+    } finally {
+      __resetCmsIndexForTests();
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('returns an empty array for an unknown source id', async () => {
+    __resetCmsIndexForTests();
+    const tmp = await mkdtemp(join(tmpdir(), 'cms-modules-for-source-miss-'));
+    try {
+      const s1 = makeSource({ id: 'S1', title: 'Source One' });
+      const doc = makeDoc([s1]);
+      const fs = makeSourcesOnlyFs(doc, tmp);
+
+      const cms = await getCmsIndex(tmp, { dbPath: ':memory:', fs });
+      expect(cms.getModulesForSource('does-not-exist')).toEqual([]);
+    } finally {
+      __resetCmsIndexForTests();
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── 6. Task 9 — ensureSourcesJson called in bootstrap ────────────────────────
 //
 // Scenario: curriculum dir has only `_sources.md` (no `_sources.json`).
 // After `getCmsIndex(dir)`:
