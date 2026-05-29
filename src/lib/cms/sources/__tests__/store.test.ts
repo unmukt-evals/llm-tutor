@@ -213,6 +213,67 @@ describe('updateSource', () => {
     // reindexAffected must NOT have been called
     expect(reindexAffected).not.toHaveBeenCalled();
   });
+
+  // ── Test 4b: updateSource kind url→doc clears fetched_at ─────────────────
+  it('clears fetched_at when kind changes from url to doc', async () => {
+    const existing = makeSource({
+      id: 'S1',
+      kind: 'url',
+      title: 'URL Source',
+      url: 'https://example.com/s1',
+      fetched_at: 1000000,
+    });
+    await seedDoc(dir, [existing]);
+
+    await updateSource(dir, 'S1', { kind: 'doc' });
+
+    const raw = await readFile(join(dir, '_sources.json'), 'utf8');
+    const doc = JSON.parse(raw) as SourcesDoc;
+    const src = doc.sources[0];
+    expect(src.kind).toBe('doc');
+    expect(src.fetched_at).toBeUndefined();
+  });
+
+  // ── Test 4c: updateSource kind doc→url sets fetched_at ───────────────────
+  it('sets fetched_at when kind changes from doc to url', async () => {
+    const existing = makeSource({
+      id: 'S1',
+      kind: 'doc',
+      title: 'Doc Source',
+      url: undefined,
+      fetched_at: undefined,
+    });
+    await seedDoc(dir, [existing]);
+
+    const before = Date.now();
+    await updateSource(dir, 'S1', { kind: 'url', url: 'https://example.com/s1' });
+    const after = Date.now();
+
+    const raw = await readFile(join(dir, '_sources.json'), 'utf8');
+    const doc = JSON.parse(raw) as SourcesDoc;
+    const src = doc.sources[0];
+    expect(src.kind).toBe('url');
+    expect(src.fetched_at).toBeGreaterThanOrEqual(before);
+    expect(src.fetched_at).toBeLessThanOrEqual(after);
+  });
+
+  // ── Test 4d: updateSource with undefined patch value does NOT overwrite ───
+  it('does not overwrite existing title when patch passes title: undefined', async () => {
+    const existing = makeSource({
+      id: 'S1',
+      kind: 'url',
+      title: 'Original Title',
+      url: 'https://example.com/s1',
+    });
+    await seedDoc(dir, [existing]);
+
+    await updateSource(dir, 'S1', { title: undefined });
+
+    const raw = await readFile(join(dir, '_sources.json'), 'utf8');
+    const doc = JSON.parse(raw) as SourcesDoc;
+    const src = doc.sources[0];
+    expect(src.title).toBe('Original Title');
+  });
 });
 
 describe('deleteSource', () => {

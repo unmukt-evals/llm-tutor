@@ -102,7 +102,13 @@ export async function addSource(dir: string, input: AddSourceInput): Promise<Cru
 
   const now = Date.now();
 
-  // Build a partial view for hash computation
+  // Build a partial view for hash computation.
+  // Fields are stored undefined-when-omitted (no ?? [] / ?? '' coercion) so
+  // that recomputing computeSourceHash on the stored Source yields the same
+  // hash. Option (a) from the Phase 5a Task 2 review.
+  //
+  // Collision note: src_<8hex> gives ~2^-32 collision probability across the
+  // source library — accepted in 5a (single-writer, small corpus).
   const partial: Partial<Source> = {
     kind: input.kind,
     title: input.title,
@@ -112,14 +118,15 @@ export async function addSource(dir: string, input: AddSourceInput): Promise<Cru
     summary: input.summary,
     thesis: input.thesis,
     mechanism: input.mechanism,
-    quotes: input.quotes,
-    grounds: input.grounds,
-    raw_text: input.raw_text,
+    quotes: input.quotes,        // undefined when omitted — intentional
+    grounds: input.grounds,      // undefined when omitted — intentional
+    raw_text: input.raw_text,    // undefined when omitted — intentional
     fetched_at: input.kind === 'url' ? now : undefined,
   };
 
-  const id = `src_${computeSourceHash(partial).slice(0, 8)}`;
-  const content_hash = computeSourceHash(partial);
+  const hash = computeSourceHash(partial);
+  const id = `src_${hash.slice(0, 8)}`;
+  const content_hash = hash;
 
   const source: Source = {
     id,
@@ -131,9 +138,9 @@ export async function addSource(dir: string, input: AddSourceInput): Promise<Cru
     summary: input.summary,
     thesis: input.thesis,
     mechanism: input.mechanism,
-    quotes: input.quotes ?? [],
-    grounds: input.grounds ?? [],
-    raw_text: input.raw_text,
+    quotes: input.quotes,        // undefined when omitted — matches hash input
+    grounds: input.grounds,      // undefined when omitted — matches hash input
+    raw_text: input.raw_text,    // undefined when omitted — matches hash input
     fetched_at: input.kind === 'url' ? now : undefined,
     content_hash,
     updated_at: now,
@@ -168,7 +175,25 @@ export async function updateSource(
   if (idx < 0) throw new Error(`Source not found: ${id}`);
 
   const now = Date.now();
-  const merged: Source = { ...doc.sources[idx], ...patch };
+  const existing = doc.sources[idx];
+
+  // Issue 3 fix: strip explicit undefined from patch before merge so that
+  // { title: undefined } does NOT overwrite an existing title.
+  const cleanPatch = Object.fromEntries(
+    Object.entries(patch).filter(([, v]) => v !== undefined),
+  ) as UpdateSourceInput;
+
+  const merged: Source = { ...existing, ...cleanPatch };
+
+  // Issue 2 fix: normalize fetched_at on kind transitions.
+  if (cleanPatch.kind && cleanPatch.kind !== existing.kind) {
+    if (cleanPatch.kind === 'url') {
+      merged.fetched_at = Date.now(); // newly URL-kind — needs re-fetch
+    } else {
+      merged.fetched_at = undefined;  // no longer URL-fetched
+    }
+  }
+
   merged.content_hash = computeSourceHash(merged);
   merged.updated_at = now;
   doc.sources[idx] = merged;
