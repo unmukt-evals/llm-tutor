@@ -10,7 +10,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getDb, runMigrations } from '@/lib/cms/db';
-import { indexEntity } from '@/lib/cms/indexer';
+import { indexEntity, indexAll } from '@/lib/cms/indexer';
 import type { FsLike } from '@/lib/cms/indexer';
 import type { SourcesDoc } from '@/lib/cms/types';
 import type { Source } from '@/lib/types';
@@ -338,6 +338,7 @@ describe('writeModule populates module_sources', () => {
       expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
       const warnText = warnSpy.mock.calls.map((args) => String(args[0])).join('\n');
       expect(warnText).toMatch(/module_sources/);
+      expect(warnText).toMatch(/S1|S2/);
 
       warnSpy.mockRestore();
       db.close();
@@ -420,5 +421,33 @@ describe('writeModule populates module_sources', () => {
     } finally {
       await rm(tmp, { recursive: true, force: true });
     }
+  });
+});
+
+// ── indexAll sweeps _sources.json ────────────────────────────────────────────
+
+describe('indexAll sweeps _sources.json', () => {
+  it('after indexAll over a dir with only _sources.json, sources table has the expected rows', async () => {
+    const s1 = makeSource({ id: 'S1', title: 'Source One' });
+    const s2 = makeSource({ id: 'S2', title: 'Source Two' });
+    const doc = makeDoc([s1, s2]);
+
+    const fs = makeFs({ [`${SOURCES_DIR}/_sources.json`]: JSON.stringify(doc) });
+
+    const db = getDb(':memory:');
+    runMigrations(db);
+
+    const report = await indexAll(db, SOURCES_DIR, fs);
+
+    const rows = db
+      .prepare('SELECT id FROM sources ORDER BY id')
+      .all() as { id: string }[];
+    expect(rows.map((r) => r.id)).toEqual(['S1', 'S2']);
+
+    // indexed counter must include the sources entry
+    expect(report.indexed).toBeGreaterThanOrEqual(1);
+    expect(report.errors).toEqual([]);
+
+    db.close();
   });
 });

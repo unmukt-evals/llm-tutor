@@ -108,7 +108,7 @@ export async function indexEntity(
 
 /**
  * Parse `_sources.json`, validate it as a `SourcesDoc`, then in ONE transaction:
- *   1. Upsert every Source into `sources` (INSERT OR REPLACE).
+ *   1. Upsert every Source into `sources` via INSERT … ON CONFLICT(id) DO UPDATE.
  *   2. Delete any `sources` rows whose id is NOT in the incoming set (the JSON
  *      is authoritative; ON DELETE CASCADE drops the `module_sources` links).
  *   3. Update the `index_rows` bookkeeping row for (kind='source', entity_id='_sources').
@@ -872,6 +872,21 @@ export async function indexAll(
       const msg = err instanceof Error ? err.message : String(err);
       console.warn(`[cms.indexAll] skipping _flashcards.md: ${msg}`);
       errors.push({ kind: 'flashcards', id: '_flashcards', error: msg });
+    }
+  }
+
+  // 3b. Sources (_sources.json if present).
+  if (top.includes('_sources.json')) {
+    try {
+      const before = snapshot('source', '_sources');
+      await indexEntity(db, dir, 'source', '_sources', fs);
+      const after = snapshot('source', '_sources');
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[cms.indexAll] skipping _sources.json: ${msg}`);
+      errors.push({ kind: 'source', id: '_sources', error: msg });
     }
   }
 
