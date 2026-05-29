@@ -758,6 +758,68 @@ export async function indexAll(
   return { indexed, skipped, errors };
 }
 
+/** Read the full mirrored TutorState — app singleton + per-module state +
+ *  per-card SR state — in the exact shape the existing helpers
+ *  (`buildSidebarModel`, `deriveNodesEdges`, `masterySnapshot`, `dueCards`,
+ *  `countDueCards`) expect today. The mirror is populated by `indexState`
+ *  from `_llmtutor-state.json`; the sidecar remains the source of truth. */
+export function selectFullState(db: BSDatabase): TutorState {
+  const app = selectAppState(db);
+
+  // Per-module state. The mirror columns mirror ModuleState 1-to-1 so we
+  // rebuild the in-memory shape verbatim.
+  const moduleRows = db
+    .prepare(
+      `SELECT module_id, mastery, mastery_history_json, mcq_state_json, stress_test_json
+       FROM module_state`,
+    )
+    .all() as Array<{
+    module_id: string;
+    mastery: string;
+    mastery_history_json: string;
+    mcq_state_json: string;
+    stress_test_json: string;
+  }>;
+  const modules: TutorState['modules'] = {};
+  for (const r of moduleRows) {
+    modules[r.module_id] = {
+      mastery: r.mastery as ModuleState['mastery'],
+      masteryHistory: JSON.parse(r.mastery_history_json),
+      mcq: JSON.parse(r.mcq_state_json),
+      stressTest: JSON.parse(r.stress_test_json),
+    };
+  }
+
+  // Per-card SR state.
+  const cardRows = db
+    .prepare(
+      `SELECT card_id, last_tested, interval_days, ease FROM flashcard_state`,
+    )
+    .all() as Array<{
+    card_id: string;
+    last_tested: string;
+    interval_days: number;
+    ease: string;
+  }>;
+  const flashcards: TutorState['flashcards'] = {};
+  for (const r of cardRows) {
+    flashcards[r.card_id] = {
+      lastTested: r.last_tested,
+      intervalDays: r.interval_days as 7 | 14 | 30,
+      ease: r.ease as 'again' | 'good',
+    };
+  }
+
+  return {
+    version: app.version,
+    modules,
+    flashcards,
+    xp: app.xp,
+    streak: app.streak,
+    sessionLog: app.sessionLog,
+  };
+}
+
 /** Read the cached app singleton — version + xp + streak + sessionLog. */
 export function selectAppState(
   db: BSDatabase,

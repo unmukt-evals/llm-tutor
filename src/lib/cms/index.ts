@@ -11,6 +11,7 @@ import {
   indexState,
   selectAppState,
   selectFlashcards,
+  selectFullState,
   selectModule,
   selectModuleState,
   selectPool,
@@ -49,6 +50,12 @@ export interface CmsIndex {
   getFlashcards(): Flashcard[];
   getModuleState(id: string): ModuleState;
   getAppState(): Pick<TutorState, 'version' | 'xp' | 'streak' | 'sessionLog'>;
+  /** Full mirrored TutorState (app singleton + per-module + per-card). The
+   *  shape matches what `JsonStateStore.read()` returns — drop-in replacement
+   *  for the learner read paths that drive Sidebar / JourneyMap / TopBar /
+   *  flashcards review. Sidecar remains the source of truth (writes flow
+   *  through `getStateStore(dir).write` + `reindexState()`). */
+  getFullState(): TutorState;
   getSources(): SourceRowsAsRendered[];
 
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
@@ -328,6 +335,10 @@ function makeIndex(s: Singleton): CmsIndex {
 
     getAppState() {
       return selectAppState(db);
+    },
+
+    getFullState() {
+      return selectFullState(db);
     },
 
     getSources() {
