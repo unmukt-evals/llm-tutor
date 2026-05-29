@@ -9,6 +9,7 @@ import type {
   MCQPool,
   ModuleState,
   TutorState,
+  Source,
 } from '@/lib/types';
 import type { Flashcard } from '@/lib/cards/parse-flashcards';
 
@@ -59,18 +60,14 @@ export interface StoredFlashcard extends Flashcard {
   updated_at: number;
 }
 
-/** Source entity (Phase 4 will populate; Phase 1 only creates the table). */
-export interface StoredSource {
-  id: string;
-  kind: string;
-  url: string | null;
-  title: string;
-  raw_text: string;
-  summary: string | null;
-  content_hash: string;
-  fetched_at: number | null;
-  updated_at: number;
+/** On-disk shape of `_sources.json`. */
+export interface SourcesDoc {
+  version: 1;
+  sources: Source[];
 }
+
+/** SQLite row mirrors Source 1:1 for Phase 4. */
+export type StoredSource = Source;
 
 /** Mirror of the sidecar's per-module state slice. The full `ModuleState`
  *  payload is JSON-encoded so reads can rebuild the in-memory shape verbatim. */
