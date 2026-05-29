@@ -7,6 +7,7 @@ import type { EntityKind, MCQPool, Module } from '@/lib/cms/types';
 import { computeContentHash } from '@/lib/cms/hash';
 import { parseModule } from '@/lib/ingest/parse-module';
 import { validatePool } from '@/lib/mcq/repository';
+import { parseFlashcards, type Flashcard } from '@/lib/cards/parse-flashcards';
 
 /** Injectable FS edge — tests can swap in an in-memory shim. Defaults to
  *  `node:fs/promises` so production callers pass nothing. */
@@ -87,6 +88,9 @@ export async function indexEntity(
       return;
     case 'pool':
       writePool(db, id, raw, hash, mtimeMs);
+      return;
+    case 'flashcards':
+      writeFlashcards(db, id, raw, hash, mtimeMs);
       return;
     default:
       throw new Error(`indexEntity: kind "${kind}" not implemented yet`);
@@ -416,4 +420,68 @@ export function selectPool(db: BSDatabase, id: string): MCQPool | null {
       return q;
     }),
   };
+}
+
+// ── Flashcards ──────────────────────────────────────────────────────────────
+
+function writeFlashcards(
+  db: BSDatabase,
+  entityId: string,
+  raw: string,
+  fileHash: string,
+  mtimeMs: number,
+): void {
+  const cards = parseFlashcards(raw);
+  const now = Date.now();
+
+  const tx = db.transaction(() => {
+    // Sidecar is the source of truth for the deck; clear + rewrite all cards.
+    db.prepare('DELETE FROM flashcards').run();
+
+    const ins = db.prepare(
+      `INSERT INTO flashcards(id, module_id, ord, last_tested, front, back, content_hash, updated_at)
+       VALUES (?,?,?,?,?,?,?,?)`,
+    );
+    cards.forEach((c, i) => {
+      // Per-card content_hash: sha256 of front || '::' || back || '::' || moduleId || '::' || lastTested.
+      // Stable across reorderings of unrelated lines so unchanged cards keep the
+      // same hash even if a neighbour was edited.
+      const perCard = computeContentHash(
+        `${c.front}::${c.back}::${c.moduleId}::${c.lastTested ?? ''}`,
+      );
+      ins.run(c.id, c.moduleId, i, c.lastTested, c.front, c.back, perCard, now);
+    });
+
+    db.prepare(
+      `INSERT INTO index_rows(kind, entity_id, content_hash, mtime_ms, indexed_at)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(kind, entity_id) DO UPDATE SET
+         content_hash=excluded.content_hash,
+         mtime_ms=excluded.mtime_ms,
+         indexed_at=excluded.indexed_at`,
+    ).run('flashcards', entityId, fileHash, mtimeMs, now);
+  });
+  tx();
+}
+
+/** Read all flashcards back from the cache, preserving file order. */
+export function selectFlashcards(db: BSDatabase): Flashcard[] {
+  const rows = db
+    .prepare(
+      'SELECT id, module_id, last_tested, front, back FROM flashcards ORDER BY ord',
+    )
+    .all() as Array<{
+    id: string;
+    module_id: string;
+    last_tested: string | null;
+    front: string;
+    back: string;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    moduleId: r.module_id,
+    lastTested: r.last_tested,
+    front: r.front,
+    back: r.back,
+  }));
 }
