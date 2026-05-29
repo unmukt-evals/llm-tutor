@@ -15,13 +15,11 @@
  * The function is also testable in isolation (no Next.js dependencies).
  */
 
-import { writeFile, readFile, rename, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { Source } from '@/lib/types';
 import type { SourcesDoc } from '@/lib/cms/types';
 import { loadSourcesJson, writeSourcesJson } from '@/lib/cms/sources/json-store';
-import { renderSourcesMd } from '@/lib/cms/sources/render-md';
 import { computeSourceHash } from '@/lib/cms/sources/source-hash';
+import { writeMdMirror } from '@/lib/cms/sources/write-md-mirror';
 import { reindexAffected } from '@/lib/cms/reindex';
 
 // ── SourceInput shape (mirrors the POST body `source` field) ─────────────────
@@ -57,34 +55,6 @@ export function deriveTitle(input: SourceInput, now = Date.now()): string {
  */
 function findExistingByUrl(doc: SourcesDoc, url: string): Source | undefined {
   return doc.sources.find((s) => s.url === url);
-}
-
-/**
- * Atomically write `_sources.md` to `<dir>/_sources.md`.
- * If the file already exists with byte-identical content, skip the write
- * (saves an fs touch that would otherwise trigger the watcher unnecessarily).
- */
-async function writeMdMirror(dir: string, doc: SourcesDoc): Promise<void> {
-  const content = renderSourcesMd(doc);
-  const mdPath = join(dir, '_sources.md');
-
-  // Skip write if already byte-identical
-  try {
-    const existing = await readFile(mdPath, 'utf8');
-    if (existing === content) return;
-  } catch {
-    // File doesn't exist yet — proceed with write
-  }
-
-  // Atomic temp+rename (same recipe as writeSourcesJson)
-  const tmpPath = `${mdPath}.tmp`;
-  await writeFile(tmpPath, content, 'utf8');
-  try {
-    await rename(tmpPath, mdPath);
-  } catch (err) {
-    await unlink(tmpPath).catch(() => {});
-    throw err;
-  }
 }
 
 // ── applySourceToDir ──────────────────────────────────────────────────────────

@@ -160,6 +160,7 @@ export interface CmsIndex {
   getSources(): Source[];
   getSourceById(id: string): Source | undefined;
   getSourcesForModule(moduleId: string): Source[];
+  getModulesForSource(sourceId: string): Array<{ id: string; name: string }>;
 
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
   reindexEntity(kind: EntityKind, id: string): Promise<ReindexResult>;
@@ -545,6 +546,19 @@ function makeIndex(s: Singleton): CmsIndex {
           )
           .all(moduleId) as SourcesRow[]
       ).map(rowToSource);
+    },
+
+    getModulesForSource(sourceId: string): Array<{ id: string; name: string }> {
+      const rows = db
+        .prepare(
+          `SELECT m.id, m.name
+           FROM modules m
+           INNER JOIN module_sources ms ON ms.module_id = m.id
+           WHERE ms.source_id = ?
+           ORDER BY m.id ASC`,
+        )
+        .all(sourceId) as Array<{ id: string; name: string }>;
+      return rows;
     },
 
     async reindexEntity(kind, id): Promise<ReindexResult> {
