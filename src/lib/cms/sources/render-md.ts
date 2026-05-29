@@ -29,10 +29,10 @@ import type { SourcesDoc } from '@/lib/cms/types';
 // They are hard-coded here so the renderer is self-contained and the output
 // matches the existing file structure exactly.
 
-const STANDING_INTRO =
+export const STANDING_INTRO =
   'These nine sources were recommended to Unmukt by colleagues and are the spine of Track B. The rule (see SKILL.md): **teach from the source, quote the source, link the source.** When a module\'s engineer-pass makes a claim, it should trace to a line below.';
 
-const JS_GATED_HINT =
+export const JS_GATED_HINT =
   'Two of the nine (RL-environments guide, Collinear post) are JS-gated and were recovered via browser render on 2026-05-26 — content is captured here so a session never has to re-fetch.';
 
 // ── renderSourcesMd ────────────────────────────────────────────────────────────
@@ -112,9 +112,11 @@ export function renderSourcesMd(doc: SourcesDoc, opts?: RenderOpts): string {
     for (const source of sources) {
       parts.push('');
       parts.push(`### ${source.id} · ${source.title}`);
-      parts.push('');
 
-      // Render bullet lines in fixed order; omit missing/empty fields entirely
+      // Render bullet lines in fixed order; omit missing/empty fields entirely.
+      // Empty/whitespace-only strings in quotes and grounds are filtered out to
+      // prevent accidentally shipping empty bullets (e.g. a stray blank Quote:
+      // line from partial editing).
       const bullets: string[] = [];
 
       if (source.url) {
@@ -130,12 +132,15 @@ export function renderSourcesMd(doc: SourcesDoc, opts?: RenderOpts): string {
         bullets.push(`- **Mechanism that matters:** ${source.mechanism}`);
       }
       if (source.quotes && source.quotes.length > 0) {
-        for (const quote of source.quotes) {
+        for (const quote of source.quotes.filter((q) => q.trim() !== '')) {
           bullets.push(`- **Quote:** ${quote}`);
         }
       }
       if (source.grounds && source.grounds.length > 0) {
-        bullets.push(`- **Grounds:** ${source.grounds.join(', ')}`);
+        const nonEmptyGrounds = source.grounds.filter((g) => g.trim() !== '');
+        if (nonEmptyGrounds.length > 0) {
+          bullets.push(`- **Grounds:** ${nonEmptyGrounds.join(', ')}`);
+        }
       }
 
       parts.push(...bullets);

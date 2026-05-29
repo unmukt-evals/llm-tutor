@@ -7,6 +7,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderSourcesMd } from '../render-md';
+// Import standing-intro constants so the full-string fixture stays DRY and
+// is not accidentally broken by a change to the constants themselves.
+import { STANDING_INTRO, JS_GATED_HINT } from '../render-md';
 import type { SourcesDoc } from '@/lib/cms/types';
 import type { Source } from '@/lib/types';
 
@@ -279,5 +282,89 @@ describe('renderSourcesMd', () => {
     };
     const result = renderSourcesMd(doc, { now: NOW });
     expect(result).toContain('- **Grounds:** B1, B2, B3');
+  });
+
+  // ── Full-string fixture: single source in one cluster ────────────────────
+  //
+  // Locks the exact rendered output (spacing fidelity) so future whitespace
+  // regressions are caught immediately. The expected string reflects the
+  // canonical live-file structure: heading immediately followed by bullets
+  // (no blank line between ### and first bullet), ONE blank line after the
+  // bullet block as the inter-source separator.
+
+  it('full-string fixture — single source, single cluster', () => {
+    const doc: SourcesDoc = {
+      version: 1,
+      sources: [
+        makeSource({
+          id: 'S1',
+          kind: 'url',
+          title: 'GRPO, rigorously — Cameron R. Wolfe',
+          cluster: 'Cluster 1 — RL post-training (how the model got its behavior)',
+          url: 'https://cameronrwolfe.substack.com/p/grpo',
+          summary: 'Deep technical essay…',
+          thesis: 'GRPO is a simplification of PPO…',
+          quotes: ['quote one', 'quote two'],
+          grounds: ['B2'],
+        }),
+      ],
+    };
+
+    const expected =
+      `---\n` +
+      `type: source-library\n` +
+      `verified: 2026-05-29\n` +
+      `---\n` +
+      `\n` +
+      `# Track B — Primary Source Library\n` +
+      `\n` +
+      STANDING_INTRO + `\n` +
+      `\n` +
+      JS_GATED_HINT + `\n` +
+      `\n` +
+      `---\n` +
+      `\n` +
+      `## Cluster 1 — RL post-training (how the model got its behavior)\n` +
+      `\n` +
+      `### S1 · GRPO, rigorously — Cameron R. Wolfe\n` +
+      `- **URL:** https://cameronrwolfe.substack.com/p/grpo\n` +
+      `- **What:** Deep technical essay…\n` +
+      `- **Thesis:** GRPO is a simplification of PPO…\n` +
+      `- **Quote:** quote one\n` +
+      `- **Quote:** quote two\n` +
+      `- **Grounds:** B2\n`;
+
+    expect(renderSourcesMd(doc, { now: NOW })).toBe(expected);
+  });
+
+  // ── Empty / whitespace-only quotes and grounds are filtered ──────────────
+
+  it('empty/whitespace-only quotes and grounds are filtered out', () => {
+    const doc: SourcesDoc = {
+      version: 1,
+      sources: [
+        makeSource({
+          id: 'S1',
+          kind: 'url',
+          title: 'Filtered Source',
+          cluster: 'Cluster 1',
+          quotes: ['', 'real quote', '   '],
+          grounds: ['', 'B1', '  '],
+        }),
+      ],
+    };
+    const result = renderSourcesMd(doc, { now: NOW });
+
+    // Only the non-empty quote and ground should appear
+    expect(result).toContain('- **Quote:** real quote');
+    expect(result).toContain('- **Grounds:** B1');
+
+    // Empty/whitespace entries must not produce bullets
+    // (check there's no "Quote: " with trailing space/nothing)
+    const lines = result.split('\n');
+    const quoteBullets = lines.filter((l) => l.startsWith('- **Quote:**'));
+    const groundsBullets = lines.filter((l) => l.startsWith('- **Grounds:**'));
+    expect(quoteBullets).toHaveLength(1);
+    expect(groundsBullets).toHaveLength(1);
   });
 });
