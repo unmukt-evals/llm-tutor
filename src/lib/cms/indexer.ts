@@ -778,12 +778,16 @@ export interface IndexAllReport {
 }
 
 /**
- * Full curriculum sweep — mirrors the four on-disk surfaces the learner reads:
- *   1. every top-level `*.md` (skipping `_`-prefixed sidecars) → indexEntity('module', id)
+ * Full curriculum sweep — mirrors the five on-disk surfaces the learner reads:
+ *   1. `_sources.json` if present → indexEntity('source', '_sources')
+ *      Sources are indexed FIRST so that writeModule's `module_sources` FK
+ *      inserts succeed on a cold boot (sources(id) must exist before modules
+ *      reference them).
+ *   2. every top-level `*.md` (skipping `_`-prefixed sidecars) → indexEntity('module', id)
  *      where `id` is read from the file's frontmatter `module_id` (parseModule).
- *   2. every `mcq/*.json` → indexEntity('pool', basename-without-`.json`)
- *   3. `_flashcards.md` if present → indexEntity('flashcards', '_flashcards')
- *   4. `_llmtutor-state.json` (or defaults) → indexState
+ *   3. every `mcq/*.json` → indexEntity('pool', basename-without-`.json`)
+ *   4. `_flashcards.md` if present → indexEntity('flashcards', '_flashcards')
+ *   5. `_llmtutor-state.json` (or defaults) → indexState
  *
  * Per-file failures are collected into `errors` and surfaced as `console.warn`
  * — one broken file does NOT abort the batch (mirrors CurriculumRepositoryImpl).
@@ -808,11 +812,30 @@ export async function indexAll(
     return row?.indexed_at;
   };
 
-  // 1. Modules — read each markdown file once, parse its frontmatter to get the
+  // Read the top-level directory listing once — used by steps 1, 2, and 4.
+  const top = await fs.readdir(dir);
+
+  // 1. Sources (_sources.json if present) — indexed FIRST so that writeModule's
+  //    module_sources FK inserts succeed on a cold boot (sources(id) must exist
+  //    before modules reference them).
+  if (top.includes('_sources.json')) {
+    try {
+      const before = snapshot('source', '_sources');
+      await indexEntity(db, dir, 'source', '_sources', fs);
+      const after = snapshot('source', '_sources');
+      if (before !== undefined && after === before) skipped += 1;
+      else indexed += 1;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[cms.indexAll] skipping _sources.json: ${msg}`);
+      errors.push({ kind: 'source', id: '_sources', error: msg });
+    }
+  }
+
+  // 2. Modules — read each markdown file once, parse its frontmatter to get the
   //    id, then call indexEntity('module', id) which reparses the same bytes.
   //    The double-parse is microseconds and keeps indexEntity's contract simple
   //    (it owns its own file read for hash-skip semantics).
-  const top = await fs.readdir(dir);
   const moduleFiles = top.filter((f) => f.endsWith('.md') && !f.startsWith('_')).sort();
   for (const f of moduleFiles) {
     let id: string | null = null;
@@ -838,7 +861,7 @@ export async function indexAll(
     }
   }
 
-  // 2. Pools — id is the basename without `.json`.
+  // 3. Pools — id is the basename without `.json`.
   let mcqEntries: string[] = [];
   try {
     mcqEntries = await fs.readdir(join(dir, 'mcq'));
@@ -860,7 +883,7 @@ export async function indexAll(
     }
   }
 
-  // 3. Flashcards (single _flashcards.md if present).
+  // 4. Flashcards (single _flashcards.md if present).
   if (top.includes('_flashcards.md')) {
     try {
       const before = snapshot('flashcards', '_flashcards');
@@ -875,22 +898,7 @@ export async function indexAll(
     }
   }
 
-  // 3b. Sources (_sources.json if present).
-  if (top.includes('_sources.json')) {
-    try {
-      const before = snapshot('source', '_sources');
-      await indexEntity(db, dir, 'source', '_sources', fs);
-      const after = snapshot('source', '_sources');
-      if (before !== undefined && after === before) skipped += 1;
-      else indexed += 1;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[cms.indexAll] skipping _sources.json: ${msg}`);
-      errors.push({ kind: 'source', id: '_sources', error: msg });
-    }
-  }
-
-  // 4. State — always run; JsonStateStore.read() returns defaults on missing
+  // 5. State — always run; JsonStateStore.read() returns defaults on missing
   //    sidecar so we never throw here in practice.
   try {
     const before = snapshot('state', '_');

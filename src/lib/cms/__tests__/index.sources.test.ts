@@ -262,15 +262,9 @@ describe('getSourcesForModule()', () => {
   it('returns exactly the 2 sources linked to B02, not the unlinked one', async () => {
     // Uses real tmpdir because resolveModulePath calls readdirSync.
     //
-    // indexAll processes modules before sources (by design). On the first cold
-    // pass, B02's FK inserts fail because sources aren't in the table yet.
-    //
-    // indexEntity has a hash-skip guard: if the module file hash hasn't changed
-    // since the last index, it returns early and skips writeModule entirely.
-    // To force a re-run of writeModule (so module_sources gets populated now
-    // that sources exist), we append a trailing newline to the module file
-    // between the initial getCmsIndex and the reindexEntity call. The changed
-    // hash bypasses the guard, writeModule runs, FK succeeds.
+    // indexAll now processes sources BEFORE modules, so on a cold boot the
+    // sources(id) rows exist when writeModule inserts into module_sources.
+    // A single getCmsIndex call is sufficient — no re-touch or reindexEntity.
     const tmp = await mkdtemp(join(tmpdir(), 'cms-sources-formod-'));
     __resetCmsIndexForTests();
     try {
@@ -283,17 +277,8 @@ describe('getSourcesForModule()', () => {
       // B02 only references S1 and S2 (per B02_MD above)
       await writeFile(join(tmp, 'B02-test-module-b02.md'), B02_MD, 'utf8');
 
-      // Cold start: indexAll runs module before sources → FK failures for S1/S2.
-      // Sources ARE indexed by the end of indexAll, but module_sources is empty.
+      // Single cold-boot pass — sources indexed first, then module. FK succeeds.
       const cms = await getCmsIndex(tmp, { dbPath: ':memory:' });
-
-      // Bust the module file's hash so reindexEntity actually re-runs writeModule.
-      // A trailing newline doesn't affect parsing but changes the sha256.
-      const modPath = join(tmp, 'B02-test-module-b02.md');
-      await writeFile(modPath, B02_MD + '\n', 'utf8');
-
-      // Re-index B02 — now hash differs, writeModule runs, sources exist → FK ok.
-      await cms.reindexEntity('module', 'B02');
 
       const forMod = cms.getSourcesForModule('B02');
 

@@ -10,7 +10,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getDb, runMigrations } from '@/lib/cms/db';
-import { indexEntity, indexAll } from '@/lib/cms/indexer';
+import { indexEntity, indexAll, defaultFs } from '@/lib/cms/indexer';
 import type { FsLike } from '@/lib/cms/indexer';
 import type { SourcesDoc } from '@/lib/cms/types';
 import type { Source } from '@/lib/types';
@@ -449,5 +449,42 @@ describe('indexAll sweeps _sources.json', () => {
     expect(report.errors).toEqual([]);
 
     db.close();
+  });
+
+  it('cold-boot: single indexAll with _sources.json + a module → module_sources populated, no console.warn', async () => {
+    // Production cold-boot scenario: sources and a module file are both present.
+    // indexAll (sources-first order) must populate module_sources in one pass
+    // without any re-touch or second reindex.
+    const tmp = await mkdtemp(join(tmpdir(), 'cms-coldboot-'));
+    try {
+      const s1 = makeSource({ id: 'S1', title: 'Source One' });
+      const s2 = makeSource({ id: 'S2', title: 'Source Two' });
+      const doc = makeDoc([s1, s2]);
+
+      await writeFile(join(tmp, '_sources.json'), JSON.stringify(doc), 'utf8');
+      await writeFile(join(tmp, 'B02-test-module-b02.md'), B02_MD, 'utf8');
+
+      const db = getDb(':memory:');
+      runMigrations(db);
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Single indexAll — no second pass, no file touch.
+      await indexAll(db, tmp, defaultFs);
+
+      // module_sources must have exactly 2 rows (S1, S2) for B02.
+      const rows = db
+        .prepare('SELECT source_id FROM module_sources WHERE module_id = ? ORDER BY source_id')
+        .all('B02') as { source_id: string }[];
+      expect(rows.map((r) => r.source_id)).toEqual(['S1', 'S2']);
+
+      // No console.warn should have fired (no FK failures).
+      expect(warnSpy.mock.calls.length).toBe(0);
+
+      warnSpy.mockRestore();
+      db.close();
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
+    }
   });
 });
