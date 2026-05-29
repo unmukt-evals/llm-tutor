@@ -122,7 +122,7 @@ function canonicalHashInput(s: Source): string {
  */
 export async function loadSourcesJson(
   dir: string,
-  fs: WritableFsLike = defaultWritableFs,
+  fs: FsLike = defaultWritableFs,
 ): Promise<SourcesDoc> {
   const filePath = join(dir, '_sources.json');
   let raw: string;
@@ -182,7 +182,7 @@ export async function writeSourcesJson(
 
   // ── Normalize: fill missing content_hash + updated_at ───────────────────
   const normalizedSources: Source[] = doc.sources.map((s) => {
-    const hasBoth = s.content_hash && s.updated_at;
+    const hasBoth = s.content_hash != null && s.updated_at != null;
     if (hasBoth) return s;
     return {
       ...s,

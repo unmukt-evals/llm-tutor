@@ -104,6 +104,35 @@ describe('writeSourcesJson / loadSourcesJson round-trip', () => {
     expect(loaded.sources[1].id).toBe('S2');
     expect(loaded.sources[1].url).toBe('https://example.com');
   });
+
+  // ── Full-field round-trip: all Source fields preserved end-to-end ──────────
+  it('preserves all Source fields (including arrays + optional scalars) through write → load', async () => {
+    const fs = memFs();
+    const full: Source = {
+      id: 'S-full',
+      kind: 'transcript',
+      title: 'Full field test',
+      url: 'https://example.com/full',
+      author: 'Jane Doe',
+      cluster: 'Cluster 3 — evaluation',
+      summary: 'A summary line.',
+      thesis: 'The thesis block.',
+      mechanism: 'The mechanism that matters.',
+      quotes: ['Quote one.', 'Quote two.'],
+      grounds: ['B1', 'C3'],
+      raw_text: 'Raw transcript body here.',
+      fetched_at: 1700000000000,
+      content_hash: '0123456789abcdef'.repeat(4),
+      updated_at: 1700000001000,
+    };
+    const doc: SourcesDoc = { version: 1, sources: [full] };
+
+    await writeSourcesJson('/fake/dir', doc, fs);
+    const loaded = await loadSourcesJson('/fake/dir', fs);
+
+    expect(loaded.sources).toHaveLength(1);
+    expect(loaded.sources[0]).toEqual(full);
+  });
 });
 
 // ── Test 5: writeSourcesJson with duplicate ids → throws ─────────────────
@@ -164,6 +193,20 @@ describe('writeSourcesJson validation', () => {
 
     expect(loaded.sources[0].content_hash).toBe('deadbeef'.repeat(8));
     expect(loaded.sources[0].updated_at).toBe(999);
+  });
+
+  // ── Regression: updated_at: 0 (Unix epoch) must not be treated as missing ─
+  it('preserves updated_at:0 (Unix epoch) unchanged when content_hash is also present', async () => {
+    const fs = memFs();
+    const s = makeSource({ id: 'S5', content_hash: 'cafebabe'.repeat(8), updated_at: 0 });
+    const doc: SourcesDoc = { version: 1, sources: [s] };
+
+    await writeSourcesJson('/fake/dir', doc, fs);
+    const loaded = await loadSourcesJson('/fake/dir', fs);
+
+    expect(loaded.sources[0].content_hash).toBe('cafebabe'.repeat(8));
+    // updated_at must remain exactly 0, not be bumped to Date.now()
+    expect(loaded.sources[0].updated_at).toBe(0);
   });
 });
 
