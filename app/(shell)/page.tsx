@@ -3,18 +3,16 @@
 // Loads curriculum + state server-side; derives nodes/edges; passes
 // pre-computed serializable props to the client JourneyMap + TopBar.
 //
-// dueCount is the real count of spaced-repetition cards due today (plan-02
-// Task 7): parse `_flashcards.md` from CURRICULUM_DIR and count via the
-// pure cards logic. A missing deck file is treated as 0 due.
+// Phase 2 (CMS reframe): curriculum + state + flashcards all flow through
+// `getCmsIndex(curriculumDir)` — no more disk parses on every click. The due
+// count is computed directly from the parsed flashcards rows (cms.getFlashcards)
+// against TutorState.flashcards via the existing pure `countDueCards` helper;
+// no need to re-read `_flashcards.md` raw text.
 
-import { readFile } from 'fs/promises';
-import path from 'path';
 import TopBar from '@/components/TopBar';
 import JourneyMap from '@/components/JourneyMap';
 import { deriveNodesEdges } from '@/lib/map/derive-nodes-edges';
-import { getCurriculumRepository } from '@/lib/ingest';
-import { getStateStore } from '@/lib/state';
-import { parseFlashcards } from '@/lib/cards/parse-flashcards';
+import { getCmsIndex } from '@/lib/cms';
 import { countDueCards } from '@/lib/cards/due-cards';
 
 export default async function HomePage() {
@@ -42,20 +40,12 @@ export default async function HomePage() {
     );
   }
 
-  const repo = getCurriculumRepository();
-  const store = getStateStore(curriculumDir);
-
-  const flashcardsPath = path.join(curriculumDir, '_flashcards.md');
-  const [curriculum, state, flashcardsRaw] = await Promise.all([
-    repo.load(curriculumDir),
-    store.read(),
-    // Missing `_flashcards.md` (or any read error) → empty deck → 0 due.
-    readFile(flashcardsPath, 'utf-8').catch(() => ''),
-  ]);
+  const cms = await getCmsIndex(curriculumDir);
+  const curriculum = cms.getCurriculum();
+  const state = cms.getFullState();
+  const flashcards = cms.getFlashcards();
 
   const { nodes, edges } = deriveNodesEdges(curriculum, state);
-
-  const flashcards = parseFlashcards(flashcardsRaw);
   const dueCount = countDueCards(flashcards, state.flashcards);
 
   return (
