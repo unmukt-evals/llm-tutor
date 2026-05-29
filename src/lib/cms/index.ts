@@ -1,5 +1,4 @@
 import 'server-only';
-import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Database as BSDatabase } from 'better-sqlite3';
 
@@ -46,7 +45,6 @@ export interface CmsIndex {
   getCurriculum(): Curriculum;
   getModule(id: string): Module | undefined;
   getPool(id: string): MCQPool | null;
-  getFlashcardsText(): string | null;
   getFlashcards(): Flashcard[];
   getModuleState(id: string): ModuleState;
   getAppState(): Pick<TutorState, 'version' | 'xp' | 'streak' | 'sessionLog'>;
@@ -308,21 +306,6 @@ function makeIndex(s: Singleton): CmsIndex {
 
     getPool(id: string) {
       return selectPool(db, id);
-    },
-
-    getFlashcardsText(): string | null {
-      // Returns the raw deck text so callers that need parseFlashcards-on-text
-      // (e.g. the home page's due-count) keep working unchanged. We re-read
-      // from disk because the deck is small and the cache already validated
-      // its hash during lazyRefresh; if the file vanished between refresh and
-      // read we surface null rather than throw.
-      const filePath = join(dir, '_flashcards.md');
-      if (!existsSync(filePath)) return null;
-      try {
-        return readFileSync(filePath, 'utf8');
-      } catch {
-        return null;
-      }
     },
 
     getFlashcards() {

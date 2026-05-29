@@ -49,10 +49,8 @@ describe('getCmsIndex read API', () => {
     expect(cms.getPool('NOPE')).toBeNull();
   });
 
-  it('getFlashcardsText returns the raw deck text; getFlashcards returns parsed rows', async () => {
+  it('getFlashcards returns parsed rows from the mirror', async () => {
     const cms = await getCmsIndex(dir, { dbPath: ':memory:' });
-    const text = cms.getFlashcardsText();
-    expect(text).toContain('module:B01');
     const cards = cms.getFlashcards();
     expect(cards.length).toBe(2);
     expect(cards[0]?.moduleId).toBe('B01');
