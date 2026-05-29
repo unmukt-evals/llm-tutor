@@ -19,7 +19,9 @@ CREATE TABLE modules (
   prerequisites_json TEXT NOT NULL DEFAULT '[]',
   primary_sources_json TEXT NOT NULL DEFAULT '[]',
   why_this_matters  TEXT NOT NULL DEFAULT '',
+  anchors_json      TEXT NOT NULL DEFAULT '[]',
   lab_spec          TEXT,
+  sources_json      TEXT NOT NULL DEFAULT '[]',
   content_hash      TEXT NOT NULL,
   updated_at        INTEGER NOT NULL
 );
@@ -86,6 +88,7 @@ CREATE TABLE mcq_pools (
 CREATE TABLE mcq_questions (
   id                            TEXT PRIMARY KEY,
   module_id                     TEXT NOT NULL REFERENCES mcq_pools(module_id) ON DELETE CASCADE,
+  ord                           INTEGER NOT NULL DEFAULT 0,
   difficulty                    TEXT NOT NULL CHECK (difficulty IN ('easy','medium','hard')),
   dimension                     TEXT NOT NULL CHECK (dimension IN ('topic','logic','example','extension')),
   stem                          TEXT NOT NULL,
@@ -95,24 +98,31 @@ CREATE TABLE mcq_questions (
   explanation                   TEXT NOT NULL,
   source_ref                    TEXT
 );
-CREATE INDEX idx_mcq_questions_module ON mcq_questions(module_id);
+CREATE INDEX idx_mcq_questions_module ON mcq_questions(module_id, ord);
 
 -- ── Flashcards + per-card SR state ──────────────────────────────────────────
 CREATE TABLE flashcards (
   id           TEXT PRIMARY KEY,
   module_id    TEXT,
+  ord          INTEGER NOT NULL DEFAULT 0,
+  last_tested  TEXT,
   front        TEXT NOT NULL,
   back         TEXT NOT NULL,
   content_hash TEXT NOT NULL,
   updated_at   INTEGER NOT NULL
 );
 CREATE INDEX idx_flashcards_module ON flashcards(module_id);
+CREATE INDEX idx_flashcards_ord ON flashcards(ord);
 
+-- No FK to flashcards: indexState() can run before flashcards have been
+-- re-indexed, and the sidecar is the source of truth for SR state regardless
+-- of whether a card row currently exists in the cache.
 CREATE TABLE flashcard_state (
-  card_id       TEXT PRIMARY KEY REFERENCES flashcards(id) ON DELETE CASCADE,
+  card_id       TEXT PRIMARY KEY,
   last_tested   TEXT NOT NULL,
   interval_days INTEGER NOT NULL,
-  ease          TEXT NOT NULL
+  ease          TEXT NOT NULL,
+  updated_at    INTEGER NOT NULL
 );
 
 -- ── Sources (Phase 4 will populate; Phase 1 leaves empty) ───────────────────
