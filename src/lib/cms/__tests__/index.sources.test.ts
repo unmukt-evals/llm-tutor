@@ -17,7 +17,8 @@
  * once sources exist.
  */
 import { describe, it, expect } from 'vitest';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FsLike } from '@/lib/cms/indexer';
@@ -342,6 +343,108 @@ describe('round-trip: writeSourcesJson → indexer → getSources()', () => {
       const got2 = sources.find((s) => s.id === 'S2')!;
       expect(got2.quotes).toEqual([]);
       expect(got2.grounds).toEqual([]);
+    } finally {
+      __resetCmsIndexForTests();
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── 5. Task 9 — ensureSourcesJson called in bootstrap ────────────────────────
+//
+// Scenario: curriculum dir has only `_sources.md` (no `_sources.json`).
+// After `getCmsIndex(dir)`:
+//   (a) `_sources.json` exists on disk (bootstrap created it).
+//   (b) `getSources()` returns the migrated source list (non-empty, ids match).
+
+// Small but real excerpt used as the _sources.md fixture.
+// Two sources in two different clusters, one with a sub-letter id (S9a).
+const BOOTSTRAP_SOURCES_MD = `---
+type: source-library
+verified: 2026-01-01
+---
+
+# Track B — Primary Source Library
+
+Intro paragraph.
+
+---
+
+## Cluster 1 — RL post-training
+
+### S2 · Why GRPO is important — Oxen.ai
+- **URL:** https://ghost.oxen.ai/why-grpo/
+- **What:** Practitioner walkthrough of GRPO.
+- **Thesis:** Drops the value model, halves compute.
+- **Grounds:** B2, B3
+
+---
+
+## Cluster 5 — Mechanistic interpretability
+
+### S9a · Scaling Monosemanticity — Anthropic
+- **URL:** https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html
+- **What:** Scaled sparse autoencoders to Claude 3 Sonnet.
+- **Quote:** "The linear representation hypothesis..."
+- **Grounds:** B7
+`;
+
+describe('Task 9 — bootstrap calls ensureSourcesJson', () => {
+  it('migrates _sources.md to _sources.json on cold boot; getSources() returns migrated list', async () => {
+    const tmp = await mkdtemp(join(tmpdir(), 'cms-bootstrap-sources-'));
+    __resetCmsIndexForTests();
+    try {
+      // Write _sources.md ONLY — no _sources.json.
+      await writeFile(join(tmp, '_sources.md'), BOOTSTRAP_SOURCES_MD, 'utf8');
+
+      // Cold boot — this should invoke ensureSourcesJson internally.
+      const cms = await getCmsIndex(tmp, { dbPath: ':memory:' });
+
+      // (a) _sources.json must now exist on disk.
+      expect(existsSync(join(tmp, '_sources.json'))).toBe(true);
+
+      // (b) getSources() must return the migrated sources.
+      const sources = cms.getSources();
+      expect(sources.length).toBeGreaterThanOrEqual(2);
+
+      const ids = sources.map((s) => s.id);
+      expect(ids).toContain('S2');
+      expect(ids).toContain('S9a');
+
+      // Spot-check a field to confirm parsing worked.
+      const s2 = sources.find((s) => s.id === 'S2')!;
+      expect(s2.title).toContain('GRPO');
+      expect(s2.cluster).toContain('Cluster 1');
+
+      // Verify the on-disk JSON is valid and contains the migrated sources.
+      const jsonRaw = await readFile(join(tmp, '_sources.json'), 'utf8');
+      const parsed = JSON.parse(jsonRaw) as { version: number; sources: { id: string }[] };
+      expect(parsed.version).toBe(1);
+      expect(parsed.sources.map((s) => s.id)).toContain('S2');
+      expect(parsed.sources.map((s) => s.id)).toContain('S9a');
+    } finally {
+      __resetCmsIndexForTests();
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('does not re-migrate if _sources.json already exists (idempotent bootstrap)', async () => {
+    const tmp = await mkdtemp(join(tmpdir(), 'cms-bootstrap-idempotent-'));
+    __resetCmsIndexForTests();
+    try {
+      // Write both files — _sources.json wins; _sources.md is ignored.
+      const s1 = makeSource({ id: 'S1', title: 'Pre-existing Source' });
+      const doc = makeDoc([s1]);
+      await writeSourcesJson(tmp, doc);
+      await writeFile(join(tmp, '_sources.md'), BOOTSTRAP_SOURCES_MD, 'utf8');
+
+      const cms = await getCmsIndex(tmp, { dbPath: ':memory:' });
+
+      // Only S1 should come back — the .md sources (S2, S9a) must NOT appear
+      // because the JSON was already present (ensureSourcesJson is a no-op).
+      const sources = cms.getSources();
+      expect(sources).toHaveLength(1);
+      expect(sources[0].id).toBe('S1');
     } finally {
       __resetCmsIndexForTests();
       await rm(tmp, { recursive: true, force: true });

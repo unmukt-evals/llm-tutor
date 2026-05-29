@@ -17,6 +17,7 @@ import {
   type FsLike,
   type IndexAllReport,
 } from '@/lib/cms/indexer';
+import { ensureSourcesJson } from '@/lib/cms/sources/ensure-json';
 import { computeContentHash } from '@/lib/cms/hash';
 import type {
   Curriculum,
@@ -222,6 +223,23 @@ export async function getCmsIndex(
     runMigrations(db);
     s = { dir, dbPath, db, fs };
     singletons.set(key, s);
+
+    // Ensure _sources.json exists before the first lazyRefresh so the indexer
+    // has a JSON to read on cold boot for dirs that only have a hand-authored
+    // _sources.md. We do NOT forward the injected FsLike here — it may be a
+    // read-only stub (used in tests for the indexer path) that has no write
+    // primitives. ensureSourcesJson always touches real disk; the injected fs
+    // is only for the indexer's read side.
+    // Wrapped in try/catch so a broken _sources.md never kills the entire CMS —
+    // we log + continue. getSources() will return [] in that case; the user can
+    // fix the .md and restart.
+    try {
+      await ensureSourcesJson(dir);
+    } catch (err) {
+      console.warn(
+        `[cms.getCmsIndex] ensureSourcesJson failed for ${dir}: ${err instanceof Error ? err.message : String(err)} — continuing without migrating _sources.md`,
+      );
+    }
   }
 
   await lazyRefresh(s);
