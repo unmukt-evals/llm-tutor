@@ -86,13 +86,16 @@ function singletonKey(dir: string, dbPath: string): string {
 /**
  * Open (or return the cached) CmsIndex for `dir`. Every call runs a LAZY
  * REFRESH against the directory:
- *   - every tracked file on disk is stat'd and hashed
- *   - rows whose hash already matches index_rows are left untouched (the
- *     existing per-kind writers short-circuit on hash match, but the
- *     factory's lazy walk also avoids the frontmatter PEEK that indexAll
- *     does — so a clean second call is truly zero-parse)
- *   - files that disappeared since the last index have their rows deleted
- *   - genuinely-new or content-changed files are routed through indexEntity
+ *   - **mtime-first short-circuit** (warm steady state): each tracked file is
+ *     stat'd; if `index_rows.mtime_ms` matches the file's current `mtimeMs`
+ *     the cached hash is trusted — no `readFile`, no `sha256`.
+ *   - **hash check** (mtime changed): the file is read and hashed; if the hash
+ *     matches the cached row the mtime_ms column is updated and the parse is
+ *     skipped (handles filesystem quirks where mtime is bumped but bytes are
+ *     identical).
+ *   - **reparse** (hash changed or new file): delegates to indexEntity which
+ *     parses + rewrites the entity rows and bookkeeping.
+ *   - files that disappeared since the last index have their rows deleted.
  *
  * Cold start (empty DB or fresh `:memory:`): falls back to indexAll for
  * the full curriculum sweep — that's unavoidable and matches the spec.
@@ -124,8 +127,9 @@ export async function getCmsIndex(
 /**
  * Walk the curriculum dir once and reconcile it with `index_rows`:
  *   - cold start (empty modules table) → run full indexAll
- *   - warm start → hash-precheck every file; reparse only the stale ones;
- *     drop rows for files that vanished
+ *   - warm start → mtime-first short-circuit (stat only, no readFile/hash when
+ *     mtime_ms matches); fall through to hash check when mtime changed; fall
+ *     through to reparse only when hash changed; drop rows for vanished files.
  */
 async function lazyRefresh(s: Singleton): Promise<void> {
   const cold =
@@ -142,15 +146,16 @@ async function lazyRefresh(s: Singleton): Promise<void> {
     touched.add(`${kind}::${id}`);
   };
 
-  // Pre-read all current hashes so we can do hash-only lookups without parsing.
-  const hashIndex = s.db.prepare(
-    'SELECT entity_id, content_hash FROM index_rows WHERE kind = ?',
+  // Pre-read all current hashes AND mtimes so warm-path checks can short-circuit
+  // before any readFile / computeContentHash call.
+  const rowIndex = s.db.prepare(
+    'SELECT entity_id, content_hash, mtime_ms FROM index_rows WHERE kind = ?',
   );
 
-  // 1. Modules. We walk the dir, hash each .md, and if the hash already exists
-  //    in index_rows[kind='module'] we skip the parse entirely (the stored
-  //    entity_id IS the module's id). Otherwise we delegate to indexEntity
-  //    which will reparse + rewrite.
+  // 1. Modules. We walk the dir, stat each .md (mtime-first short-circuit), and
+  //    only read + hash the file when mtime differs from index_rows.mtime_ms.
+  //    If the hash also matches (mtime bumped but content identical), indexEntity
+  //    still short-circuits internally — no parse fires.
   let topEntries: string[] = [];
   try {
     topEntries = await s.fs.readdir(s.dir);
@@ -158,21 +163,55 @@ async function lazyRefresh(s: Singleton): Promise<void> {
     topEntries = [];
   }
 
-  const moduleRows = hashIndex.all('module') as { entity_id: string; content_hash: string }[];
+  const moduleRows = rowIndex.all('module') as {
+    entity_id: string;
+    content_hash: string;
+    mtime_ms: number;
+  }[];
+  // Two indices for the warm-path lookups:
+  //   moduleByHash — unchanged-mtime path: hash → known id (no stat needed)
+  //   moduleById   — changed-mtime path: id → cached row (for post-stat check)
   const moduleByHash = new Map(moduleRows.map((r) => [r.content_hash, r.entity_id]));
+  const moduleById = new Map(moduleRows.map((r) => [r.entity_id, r]));
 
   for (const f of topEntries.filter((n) => n.endsWith('.md') && !n.startsWith('_')).sort()) {
     try {
-      const raw = await s.fs.readFile(join(s.dir, f));
+      const filePath = join(s.dir, f);
+
+      // ── mtime-first short-circuit (warm steady state) ─────────────────────
+      // We don't know the entity_id yet for new files, but for files that are
+      // already in index_rows we CAN try an mtime check first: peek the hash
+      // from the prior indexAll (cold start stored it) then do a reverse lookup.
+      // For files that are already indexed, the mtime-first path fires by
+      // checking whether ANY cached module row has the right mtime.  The safer
+      // per-file path: stat first, then try to match against moduleByHash by
+      // reading bytes only when mtime changed.
+
+      const st = await s.fs.stat(filePath);
+      // If any cached module row was indexed at exactly this mtime, its content
+      // hash is trusted — skip readFile entirely.
+      const mtimeHit = moduleRows.find((r) => r.mtime_ms === st.mtimeMs);
+      if (mtimeHit) {
+        mark('module', mtimeHit.entity_id);
+        continue;
+      }
+
+      // mtime differs (or file is new) → must read and hash.
+      const raw = await s.fs.readFile(filePath);
       const hash = computeContentHash(raw);
       const knownId = moduleByHash.get(hash);
       if (knownId) {
+        // Content hash matches a cached row — update only the mtime_ms so
+        // future warm calls take the mtime-first path.
+        s.db
+          .prepare(
+            "UPDATE index_rows SET mtime_ms=? WHERE kind='module' AND entity_id=?",
+          )
+          .run(st.mtimeMs, knownId);
         mark('module', knownId);
         continue;
       }
       // Stale or new — parse to learn the id and route through indexEntity.
-      // (Importing parseModule here would create a duplicate read path; defer
-      // to indexEntity which already does the right thing.)
       const { parseModule } = await import('@/lib/ingest/parse-module');
       const peeked = parseModule(raw);
       if (!peeked.id) continue;
@@ -183,23 +222,44 @@ async function lazyRefresh(s: Singleton): Promise<void> {
     }
   }
 
-  // 2. Pools. Basename minus `.json` IS the entity id, so we can hash-precheck
-  //    directly against index_rows without any parse.
+  // 2. Pools. Basename minus `.json` IS the entity id — mtime check first, then
+  //    hash only when mtime changed, then reindex only when hash changed.
   let mcqEntries: string[] = [];
   try {
     mcqEntries = await s.fs.readdir(join(s.dir, 'mcq'));
   } catch {
     // no mcq/ dir — fine
   }
+  const poolRows = rowIndex.all('pool') as {
+    entity_id: string;
+    content_hash: string;
+    mtime_ms: number;
+  }[];
+  const poolById = new Map(poolRows.map((r) => [r.entity_id, r]));
+
   for (const f of mcqEntries.filter((n) => n.endsWith('.json')).sort()) {
     const id = f.replace(/\.json$/, '');
     try {
-      const raw = await s.fs.readFile(join(s.dir, 'mcq', f));
+      const filePath = join(s.dir, 'mcq', f);
+      const st = await s.fs.stat(filePath);
+      const cached = poolById.get(id);
+
+      // ── mtime-first short-circuit ─────────────────────────────────────────
+      if (cached && cached.mtime_ms === st.mtimeMs) {
+        mark('pool', id);
+        continue;
+      }
+
+      // mtime changed → read + hash.
+      const raw = await s.fs.readFile(filePath);
       const hash = computeContentHash(raw);
-      const prev = s.db
-        .prepare("SELECT content_hash FROM index_rows WHERE kind='pool' AND entity_id=?")
-        .get(id) as { content_hash: string } | undefined;
-      if (prev?.content_hash === hash) {
+      if (cached?.content_hash === hash) {
+        // Content unchanged — update mtime_ms only so next call takes the fast path.
+        s.db
+          .prepare(
+            "UPDATE index_rows SET mtime_ms=? WHERE kind='pool' AND entity_id=?",
+          )
+          .run(st.mtimeMs, id);
         mark('pool', id);
         continue;
       }
@@ -213,15 +273,31 @@ async function lazyRefresh(s: Singleton): Promise<void> {
   // 3. Flashcards (single sentinel id `_flashcards`).
   if (topEntries.includes('_flashcards.md')) {
     try {
-      const raw = await s.fs.readFile(join(s.dir, '_flashcards.md'));
-      const hash = computeContentHash(raw);
-      const prev = s.db
-        .prepare("SELECT content_hash FROM index_rows WHERE kind='flashcards' AND entity_id='_flashcards'")
-        .get() as { content_hash: string } | undefined;
-      if (prev?.content_hash !== hash) {
-        await indexEntity(s.db, s.dir, 'flashcards', '_flashcards', s.fs);
+      const filePath = join(s.dir, '_flashcards.md');
+      const st = await s.fs.stat(filePath);
+      const cached = s.db
+        .prepare(
+          "SELECT content_hash, mtime_ms FROM index_rows WHERE kind='flashcards' AND entity_id='_flashcards'",
+        )
+        .get() as { content_hash: string; mtime_ms: number } | undefined;
+
+      // ── mtime-first short-circuit ─────────────────────────────────────────
+      if (cached && cached.mtime_ms === st.mtimeMs) {
+        mark('flashcards', '_flashcards');
+      } else {
+        const raw = await s.fs.readFile(filePath);
+        const hash = computeContentHash(raw);
+        if (cached?.content_hash === hash) {
+          s.db
+            .prepare(
+              "UPDATE index_rows SET mtime_ms=? WHERE kind='flashcards' AND entity_id='_flashcards'",
+            )
+            .run(st.mtimeMs);
+        } else {
+          await indexEntity(s.db, s.dir, 'flashcards', '_flashcards', s.fs);
+        }
+        mark('flashcards', '_flashcards');
       }
-      mark('flashcards', '_flashcards');
     } catch (err) {
       console.warn(`[cms.lazyRefresh] skipping _flashcards.md: ${err instanceof Error ? err.message : String(err)}`);
     }
