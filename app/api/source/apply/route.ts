@@ -1,9 +1,14 @@
 // app/api/source/apply/route.ts
-// POST { candidate, moduleFileName? } → { ok: true, written }. Re-validates and
-// atomically writes the module .md + mcq/<id>.json. Nothing is written unless the
-// request reaches here (explicit accept on the client). Server-only.
+// POST { candidate, moduleFileName?, source? } → { ok: true, written }.
+// Re-validates and atomically writes the module .md + mcq/<id>.json. Nothing is
+// written unless the request reaches here (explicit accept on the client).
+// When `source` is present, also upserts the Source entity into `_sources.json`,
+// re-renders `_sources.md`, and reindexes — all wrapped in try/catch so a
+// Source-write failure never fails the module+pool write. Server-only.
 import { NextResponse } from 'next/server';
 import { applyCandidate, moduleFileName as defaultModuleFileName } from '@/lib/source/apply';
+import { applySourceToDir } from '@/lib/source/apply-source';
+import type { SourceInput } from '@/lib/source/apply-source';
 import { assertParsesAsModule } from '@/lib/llm/candidate';
 import { reindexAffected } from '@/lib/cms/reindex';
 import type { Candidate } from '@/lib/llm/types';
@@ -23,9 +28,10 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  const { candidate, moduleFileName } = (body ?? {}) as {
+  const { candidate, moduleFileName, source } = (body ?? {}) as {
     candidate?: Candidate;
     moduleFileName?: unknown;
+    source?: SourceInput;
   };
   if (!candidate || typeof candidate.markdown !== 'string' || typeof candidate.poolJson !== 'string') {
     return NextResponse.json({ error: 'Body must include a candidate' }, { status: 400 });
@@ -57,6 +63,12 @@ export async function POST(request: Request) {
         }`,
       );
     }
+
+    // Phase 4 — upsert the Source entity into _sources.json, re-render
+    // _sources.md, and reindex. Wrapped inside applySourceToDir which
+    // swallows any error and logs a warning — the module + pool already
+    // landed and that's the user's expected outcome.
+    await applySourceToDir(dir, source ?? null);
 
     return NextResponse.json({ ok: true, written });
   } catch (err) {
