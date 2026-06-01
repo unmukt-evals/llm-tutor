@@ -88,8 +88,8 @@ function formToBody(f: FormState): Record<string, unknown> {
 }
 
 const inputCls =
-  'w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none';
-const labelCls = 'block text-xs font-medium text-neutral-400 mb-1';
+  'w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+const labelCls = 'block text-xs font-medium text-slate-600 mb-1';
 
 export function SourceEditClient({ source, citingModules = [] }: Props) {
   const router = useRouter();
@@ -164,12 +164,12 @@ export function SourceEditClient({ source, citingModules = [] }: Props) {
     <div className="space-y-6">
       {/* Citing modules chip list */}
       {citingModules.length > 0 && (
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-slate-600">
           Cited by:{' '}
           {citingModules.map((m) => (
             <span
               key={m.id}
-              className="mr-1 rounded bg-neutral-700 px-2 py-0.5 font-mono text-xs text-neutral-200"
+              className="mr-1 rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700"
             >
               {m.id}
             </span>
@@ -182,7 +182,7 @@ export function SourceEditClient({ source, citingModules = [] }: Props) {
         {!isCreate && (
           <div>
             <label className={labelCls}>ID</label>
-            <div className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-sm text-emerald-400">
+            <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-emerald-700">
               {source!.id}
             </div>
           </div>
@@ -331,7 +331,7 @@ export function SourceEditClient({ source, citingModules = [] }: Props) {
 
         {/* Error banner */}
         {error && (
-          <div className="rounded border border-red-700 bg-red-900/30 px-3 py-2 text-sm text-red-200">
+          <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
             {error}
           </div>
         )}
@@ -340,7 +340,7 @@ export function SourceEditClient({ source, citingModules = [] }: Props) {
         <div className="flex items-center gap-3">
           <Link
             href="/studio/sources"
-            className="text-sm text-neutral-400 hover:text-neutral-200"
+            className="text-sm text-slate-500 hover:text-slate-700"
           >
             Cancel
           </Link>
@@ -350,7 +350,7 @@ export function SourceEditClient({ source, citingModules = [] }: Props) {
                 type="button"
                 onClick={handleDelete}
                 disabled={isPending}
-                className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
               >
                 Delete
               </button>
