@@ -2,10 +2,8 @@
 
 // src/components/studio/StudioNav.tsx
 // Top navigation bar for the Studio shell.
-//   - Sources / Modules / Pools are real in-Studio links and get an active
-//     style when their section is the current path (5b).
-//   - Drafts ↗ and Cards ↗ point OUT of Studio into the learner shell until
-//     Phase 5c absorbs them.
+// Sources / Modules / Pools / Drafts / Cards are all real in-Studio links
+// and get an active style when their section is the current path (5b/5c).
 //
 // Client component because we use usePathname() to highlight the active
 // section.
@@ -65,13 +63,16 @@ export function StudioNav() {
         label="Pools"
         active={pathname.startsWith('/studio/pools')}
       />
-      <span className="mx-2 text-slate-300">·</span>
-      <Link href="/source" className="rounded px-3 py-1 text-slate-600 hover:bg-slate-100">
-        Drafts ↗
-      </Link>
-      <Link href="/flashcards" className="rounded px-3 py-1 text-slate-600 hover:bg-slate-100">
-        Cards ↗
-      </Link>
+      <NavLink
+        href="/studio/drafts"
+        label="Drafts"
+        active={pathname.startsWith('/studio/drafts')}
+      />
+      <NavLink
+        href="/studio/cards"
+        label="Cards"
+        active={pathname.startsWith('/studio/cards')}
+      />
       <span className="ml-auto text-xs text-slate-400">authoring</span>
     </nav>
   );
