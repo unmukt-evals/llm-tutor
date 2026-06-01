@@ -426,6 +426,39 @@ async function lazyRefresh(s: Singleton): Promise<void> {
     }
   }
 
+  // 3.5. Sources (single sentinel id `_sources`). _sources.json is the SoT.
+  if (topEntries.includes('_sources.json')) {
+    try {
+      const filePath = join(s.dir, '_sources.json');
+      const st = await s.fs.stat(filePath);
+      const cached = s.db
+        .prepare(
+          "SELECT content_hash, mtime_ms FROM index_rows WHERE kind='source' AND entity_id='_sources'",
+        )
+        .get() as { content_hash: string; mtime_ms: number } | undefined;
+
+      // mtime-first short-circuit
+      if (cached && cached.mtime_ms === st.mtimeMs) {
+        mark('source', '_sources');
+      } else {
+        const raw = await s.fs.readFile(filePath);
+        const hash = computeContentHash(raw);
+        if (cached?.content_hash === hash) {
+          s.db
+            .prepare(
+              "UPDATE index_rows SET mtime_ms=? WHERE kind='source' AND entity_id='_sources'",
+            )
+            .run(st.mtimeMs);
+        } else {
+          await indexEntity(s.db, s.dir, 'source', '_sources', s.fs);
+        }
+        mark('source', '_sources');
+      }
+    } catch (err) {
+      console.warn(`[cms.lazyRefresh] skipping _sources.json: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   // 4. State — JsonStateStore.read() returns defaults on missing sidecar, so
   //    we always run indexState (its own hash-skip handles the no-op path).
   try {
