@@ -177,6 +177,10 @@ export async function updateSource(
   const now = Date.now();
   const existing = doc.sources[idx];
 
+  // Phase 6 — capture the OLD content hash before merge so we can decide
+  // whether to cascade-mark citing modules as stale after the write.
+  const oldHash = existing.content_hash;
+
   // Issue 3 fix: strip explicit undefined from patch before merge so that
   // { title: undefined } does NOT overwrite an existing title.
   const cleanPatch = Object.fromEntries(
@@ -203,6 +207,21 @@ export async function updateSource(
 
   // Best-effort post-mutation pipeline
   await runPostWritePipeline(dir, doc);
+
+  // Phase 6 — cascade staleness. If the content hash changed, every module
+  // that cites this source needs to be re-reviewed. We mark module_sources.stale_at
+  // for every link row that points at this source. Best-effort: a failure
+  // here does NOT roll back the JSON write (which is the SoT).
+  if (merged.content_hash !== oldHash) {
+    try {
+      const cms = await getCmsIndex(dir);
+      cms.markSourceStale(id, now);
+    } catch (err) {
+      console.warn(
+        `[store] markSourceStale failed for ${id} (JSON write succeeded): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   return { id, content_hash: merged.content_hash };
 }

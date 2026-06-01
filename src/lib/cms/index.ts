@@ -166,6 +166,19 @@ export interface CmsIndex {
    *  per row. */
   getPoolIds(): string[];
 
+  // Phase 6 — source cascade staleness.
+  /** Citing modules that are currently flagged as stale wrt `sourceId`. */
+  getStaleModulesForSource(sourceId: string): Array<{ moduleId: string; staleAt: number }>;
+  /** Global view: every (module, source) link with stale_at set, joining the
+   *  source title. Used by the Studio dashboard. */
+  getStaleSourceLinks(): Array<{ moduleId: string; sourceId: string; sourceTitle: string; staleAt: number }>;
+  /** Clear stale_at on a single module_sources row. Idempotent — unknown pairs
+   *  are silent no-ops. Called when the user clicks "Mark reviewed". */
+  clearStaleFlag(moduleId: string, sourceId: string): void;
+  /** Phase 6 — mark every module_sources row that points at `sourceId` as
+   *  stale. Used by `updateSource` after a hash-relevant Source mutation. */
+  markSourceStale(sourceId: string, staleAt: number): void;
+
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
   reindexEntity(kind: EntityKind, id: string): Promise<ReindexResult>;
   reindexState(): Promise<{ ok: true }>;
@@ -603,6 +616,66 @@ function makeIndex(s: Singleton): CmsIndex {
         )
         .all(sourceId) as Array<{ id: string; name: string }>;
       return rows;
+    },
+
+    // ── Phase 6 — cascade staleness helpers ──────────────────────────────────
+
+    getStaleModulesForSource(sourceId: string): Array<{ moduleId: string; staleAt: number }> {
+      const rows = db
+        .prepare(
+          `SELECT module_id AS moduleId, stale_at AS staleAt
+           FROM module_sources
+           WHERE source_id = ? AND stale_at IS NOT NULL
+           ORDER BY module_id ASC`,
+        )
+        .all(sourceId) as Array<{ moduleId: string; staleAt: number }>;
+      return rows;
+    },
+
+    getStaleSourceLinks(): Array<{
+      moduleId: string;
+      sourceId: string;
+      sourceTitle: string;
+      staleAt: number;
+    }> {
+      const rows = db
+        .prepare(
+          `SELECT ms.module_id AS moduleId,
+                  ms.source_id AS sourceId,
+                  s.title      AS sourceTitle,
+                  ms.stale_at  AS staleAt
+           FROM module_sources ms
+           INNER JOIN sources s ON s.id = ms.source_id
+           WHERE ms.stale_at IS NOT NULL
+           ORDER BY ms.source_id ASC, ms.module_id ASC`,
+        )
+        .all() as Array<{
+        moduleId: string;
+        sourceId: string;
+        sourceTitle: string;
+        staleAt: number;
+      }>;
+      return rows;
+    },
+
+    clearStaleFlag(moduleId: string, sourceId: string): void {
+      const tx = db.transaction(() => {
+        db
+          .prepare(
+            'UPDATE module_sources SET stale_at = NULL WHERE module_id = ? AND source_id = ?',
+          )
+          .run(moduleId, sourceId);
+      });
+      tx();
+    },
+
+    markSourceStale(sourceId: string, staleAt: number): void {
+      const tx = db.transaction(() => {
+        db
+          .prepare('UPDATE module_sources SET stale_at = ? WHERE source_id = ?')
+          .run(staleAt, sourceId);
+      });
+      tx();
     },
 
     async reindexEntity(kind, id): Promise<ReindexResult> {
