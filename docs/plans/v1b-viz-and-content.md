@@ -1598,7 +1598,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ### Task 12: Deepen M02 curriculum content (Obsidian — NOT git-added)
 
 **Files:**
-- Modify: `/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/M02-embeddings.md`
+- Modify: `~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/M02-embeddings.md`
 
 > This is CURRICULUM CONTENT living in the Obsidian vault, NOT repo code. Edit it; do **NOT** `git add` it to the llm-tutor repo. Verification: run the existing parser over it (a temporary node check) to confirm it round-trips and the visuals validate. The precomputed coords are hand-authored fixtures — the negation case "not a bank" deliberately sits NEAR "bank" (the failure mode), and clusters are labeled `finance` / `ai` / `generic`.
 
@@ -1707,7 +1707,7 @@ The two visualizations below make this concrete: a token-embeddings table (token
 Run (from the repo root) a one-shot node check that parses the edited file and asserts the visuals validated. This uses `tsx` if available, else compiles via the project. Simplest reliable path — a tiny throwaway script in `/tmp` (per the "no /tmp for project storage" rule this is a true one-time verification, not stored state):
 
 ```bash
-cd /Users/unmukt/llm-tutor && cat > /tmp/check-m02.mjs <<'EOF'
+cd ~/llm-tutor && cat > /tmp/check-m02.mjs <<'EOF'
 import { readFile } from 'node:fs/promises';
 import { parseModule } from './src/lib/ingest/parse-module.ts';
 const raw = await readFile(
@@ -1730,7 +1730,7 @@ Expected output: `id M02 visuals [ 'vector-table', 'embedding-scatter' ]` then `
 
 - [ ] **Step 4: Confirm the M02 .md is NOT staged for the repo**
 
-Run: `cd /Users/unmukt/llm-tutor && git status --porcelain`
+Run: `cd ~/llm-tutor && git status --porcelain`
 Expected: NO entry for any path under `Obsidian/` (the file lives outside the repo tree entirely, so it will not appear — confirm the working tree shows only the plan doc + Task 1–11 code). Do NOT `git add` the curriculum file.
 
 - [ ] **Step 5: No commit for the curriculum edit**
@@ -1745,7 +1745,7 @@ The M02 edit is Obsidian content, not repo code — there is nothing to commit i
 
 - [ ] **Step 1: Run the full suite**
 
-Run: `cd /Users/unmukt/llm-tutor && npm run test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm run test && npm run typecheck && npm run lint && npm run build`
 Expected: ALL PASS — every viz/parser test green, typecheck clean, lint clean, `next build` succeeds.
 
 - [ ] **Step 2: Commit any final lint fixups (if lint surfaced auto-fixable issues)**

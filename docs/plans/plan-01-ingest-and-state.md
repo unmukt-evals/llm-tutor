@@ -154,7 +154,7 @@ export default defineConfig({
 ```bash
 # Absolute path to the read-only curriculum folder (Obsidian LLM-Curriculum).
 # The app reads *.md and mcq/*.json from here and owns _llmtutor-state.json here.
-CURRICULUM_DIR=/Users/unmukt/Obsidian/Trustevals/Trustevals/LLM-Curriculum
+CURRICULUM_DIR=~/Obsidian/Trustevals/Trustevals/LLM-Curriculum
 ```
 
 - [ ] **Step 6: Create `app/page.tsx` (placeholder home route)**
@@ -184,18 +184,18 @@ describe('test harness', () => {
 
 - [ ] **Step 8: Install dependencies**
 
-Run: `cd /Users/unmukt/llm-tutor && npm install`
+Run: `cd ~/llm-tutor && npm install`
 Expected: dependencies install, `node_modules/` created, `package-lock.json` written, exit 0.
 
 - [ ] **Step 9: Run the smoke test to verify the harness works**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test`
+Run: `cd ~/llm-tutor && npm test`
 Expected: PASS — 1 passing test (`test harness > runs`).
 
 - [ ] **Step 10: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add package.json package-lock.json tsconfig.json next.config.ts vitest.config.ts .env.local.example app/page.tsx src/lib/__tests__/smoke.test.ts
 git commit -m "chore: scaffold Next.js + TS + vitest harness with passing smoke test
 
@@ -298,7 +298,7 @@ describe('shared types', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/__tests__/types.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/__tests__/types.test.ts`
 Expected: FAIL — cannot resolve module `@/lib/types` (file does not exist yet).
 
 - [ ] **Step 3: Create `src/lib/types.ts` (verbatim from 00-shared-model §2–§6)**
@@ -439,13 +439,13 @@ export interface StateStore {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/__tests__/types.test.ts && npm run typecheck`
+Run: `cd ~/llm-tutor && npm test -- src/lib/__tests__/types.test.ts && npm run typecheck`
 Expected: PASS — 2 passing tests; `tsc --noEmit` exits 0 (no type errors).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/types.ts src/lib/__tests__/types.test.ts
 git commit -m "feat(types): add shared type contract from 00-shared-model
 
@@ -539,7 +539,7 @@ DC1: List three nondeterminism sources.
 - [ ] **Step 2: Commit (no test yet; fixture is consumed by Task 4)**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/__tests__/fixtures/B01-sample.md
 git commit -m "test(ingest): add trimmed contract-complete B01 fixture module
 
@@ -598,7 +598,7 @@ describe('parseModule — identity + whyThisMatters', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: FAIL — cannot resolve `@/lib/ingest/parse-module`.
 
 - [ ] **Step 3: Write minimal implementation `src/lib/ingest/parse-module.ts`**
@@ -673,13 +673,13 @@ export function parseModule(raw: string): Module {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: PASS — 4 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/parse-module.ts src/lib/ingest/__tests__/parse-module.test.ts
 git commit -m "feat(ingest): parse frontmatter identity + whyThisMatters (absent → '')
 
@@ -734,7 +734,7 @@ describe('parseModule — passes, anchors, lab spec', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: FAIL — passes/anchors/labSpec assertions fail (current impl returns empty `passes`, empty `anchors`, `labSpec: undefined`).
 
 - [ ] **Step 3: Update `parse-module.ts` to populate passes, anchors, lab spec**
@@ -782,13 +782,13 @@ export function parseModule(raw: string): Module {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: PASS — all 8 tests pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/parse-module.ts src/lib/ingest/__tests__/parse-module.test.ts
 git commit -m "feat(ingest): parse 3 depth passes, anchors, lab spec (absent → undefined)
 
@@ -830,7 +830,7 @@ describe('parseModule — diagram extraction', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: FAIL — `mod.diagrams` is `[]` (length 0, expected 2).
 
 - [ ] **Step 3: Add the diagram extractor and wire it in**
@@ -878,13 +878,13 @@ Then in `parseModule`, change the `diagrams: []` line to:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: PASS — all 10 tests pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/parse-module.ts src/lib/ingest/__tests__/parse-module.test.ts
 git commit -m "feat(ingest): extract fenced mermaid/ascii diagrams from engineer pass
 
@@ -930,7 +930,7 @@ describe('parseModule — application drills', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: FAIL — `mod.drills` is `[]`.
 
 - [ ] **Step 3: Add the drill parser and wire it in**
@@ -973,13 +973,13 @@ Then in `parseModule`, change `drills: []` to:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: PASS — all 13 tests pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/parse-module.ts src/lib/ingest/__tests__/parse-module.test.ts
 git commit -m "feat(ingest): parse application drills (scenario + DC1/DC2)
 
@@ -1031,7 +1031,7 @@ describe('parseModule — stress tests, flashcards, sources', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts`
 Expected: FAIL — `stressTests`, `flashcardSeeds`, `sources` are all `[]`.
 
 - [ ] **Step 3: Add the three parsers and wire them in**
@@ -1075,13 +1075,13 @@ Then in `parseModule`, change the three lines:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts && npm run typecheck`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/parse-module.test.ts && npm run typecheck`
 Expected: PASS — all 17 tests pass; `tsc` exits 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/parse-module.ts src/lib/ingest/__tests__/parse-module.test.ts
 git commit -m "feat(ingest): parse stress tests (3 lenses), flashcard seeds, sources
 
@@ -1186,7 +1186,7 @@ describe('CurriculumRepository.load', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/repository.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/repository.test.ts`
 Expected: FAIL — cannot resolve `@/lib/ingest/repository`.
 
 - [ ] **Step 3: Write `src/lib/ingest/repository.ts`**
@@ -1231,13 +1231,13 @@ export class CurriculumRepositoryImpl implements CurriculumRepository {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/ingest/__tests__/repository.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/ingest/__tests__/repository.test.ts`
 Expected: PASS — 4 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ingest/repository.ts src/lib/ingest/__tests__/repository.test.ts
 git commit -m "feat(ingest): CurriculumRepository.load reads *.md dir into Curriculum
 
@@ -1292,7 +1292,7 @@ describe('defaultTutorState', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/defaults.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/defaults.test.ts`
 Expected: FAIL — cannot resolve `@/lib/state/defaults`.
 
 - [ ] **Step 3: Write `src/lib/state/defaults.ts`**
@@ -1335,13 +1335,13 @@ export function defaultTutorState(): TutorState {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/defaults.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/defaults.test.ts`
 Expected: PASS — 2 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/defaults.ts src/lib/state/__tests__/defaults.test.ts
 git commit -m "feat(state): default TutorState and ModuleState factories
 
@@ -1415,7 +1415,7 @@ describe('nextMastery — blank → fuzzy', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
 Expected: FAIL — cannot resolve `@/lib/state/mastery`.
 
 - [ ] **Step 3: Write `src/lib/state/mastery.ts` (blank→fuzzy only for now)**
@@ -1455,13 +1455,13 @@ export function nextMastery(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
 Expected: PASS — 3 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/mastery.ts src/lib/state/__tests__/mastery.test.ts
 git commit -m "feat(state): nextMastery blank→fuzzy (easy+medium correct, no open diagnosis)
 
@@ -1543,7 +1543,7 @@ describe('nextMastery — solid → verified', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts`
 Expected: FAIL — fuzzy/solid cases return the unchanged `prev` (impl only handles blank→fuzzy).
 
 - [ ] **Step 3: Extend `src/lib/state/mastery.ts`**
@@ -1607,13 +1607,13 @@ export function nextMastery(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts && npm run typecheck`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/mastery.test.ts && npm run typecheck`
 Expected: PASS — all 10 mastery tests pass; `tsc` exits 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/mastery.ts src/lib/state/__tests__/mastery.test.ts
 git commit -m "feat(state): nextMastery fuzzy→solid and solid→verified transitions
 
@@ -1690,7 +1690,7 @@ describe('nextSrInterval', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/sr.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/sr.test.ts`
 Expected: FAIL — cannot resolve `@/lib/state/sr`.
 
 - [ ] **Step 3: Write `src/lib/state/sr.ts`**
@@ -1730,13 +1730,13 @@ export function nextSrInterval(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/sr.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/sr.test.ts`
 Expected: PASS — 7 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/sr.ts src/lib/state/__tests__/sr.test.ts
 git commit -m "feat(state): spaced-repetition isCardDue + nextSrInterval (7/14/30)
 
@@ -1818,7 +1818,7 @@ describe('JsonStateStore.getModule', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
 Expected: FAIL — cannot resolve `@/lib/state/store`.
 
 - [ ] **Step 3: Write `src/lib/state/store.ts` (read + getModule + a write that Task 15 hardens)**
@@ -1872,13 +1872,13 @@ function isNotFound(err: unknown): boolean {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
 Expected: PASS — 4 passing tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/store.ts src/lib/state/__tests__/store.test.ts
 git commit -m "feat(state): JsonStateStore read (default-if-missing) + getModule
 
@@ -1939,7 +1939,7 @@ describe('JsonStateStore.write — atomicity + write target', () => {
 
 - [ ] **Step 2: Run test to verify it fails (or passes — confirm the contract)**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
+Run: `cd ~/llm-tutor && npm test -- src/lib/state/__tests__/store.test.ts`
 Expected: The round-trip, no-leftover-tmp, no-.md, and pretty-print tests PASS against the Task 14 implementation. If the pretty-print test FAILS, the `write` in Task 14 was not using `JSON.stringify(s, null, 2)` — fix it to match Task 14 Step 3 (which already specifies the 2-space indent).
 
 - [ ] **Step 3: (Only if a test failed) align `write` to the spec**
@@ -1956,13 +1956,13 @@ If the pretty-print test failed, ensure `write` in `src/lib/state/store.ts` read
 
 - [ ] **Step 4: Run the FULL suite to verify everything passes together**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck`
 Expected: PASS — all tests across ingest + state + types + smoke pass; `tsc --noEmit` exits 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/state/__tests__/store.test.ts src/lib/state/store.ts
 git commit -m "test(state): assert atomic write round-trip, no leftover tmp, never writes .md
 
@@ -1978,18 +1978,18 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Run the production build**
 
-Run: `cd /Users/unmukt/llm-tutor && npm run build`
+Run: `cd ~/llm-tutor && npm run build`
 Expected: Next.js compiles successfully (the `/` route builds; `src/lib/**` type-checks as part of the build). Exit 0.
 
 - [ ] **Step 2: Run the full test suite + typecheck one final time**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck`
 Expected: PASS — full suite green; `tsc` exits 0.
 
 - [ ] **Step 3: Commit any build-generated config (e.g. `next-env.d.ts`) if created**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add -A
 git commit -m "chore: verify Next.js build + full S-INGEST/S-STATE suite green
 

@@ -77,7 +77,7 @@ app/
 - [ ] **Step 1: Install React Flow, mermaid, and shiki**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 npm install @xyflow/react mermaid shiki
 ```
 
@@ -123,7 +123,7 @@ export async function patchState(path: string[], value: unknown): Promise<TutorS
 - [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors. (If `TutorState` isn't yet exported by `src/lib/types.ts`, fix the import path to wherever plan-01 placed it — do not redefine the type.)
@@ -131,7 +131,7 @@ Expected: no errors. (If `TutorState` isn't yet exported by `src/lib/types.ts`, 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add package.json package-lock.json src/lib/api-client.ts
 git commit -m "feat(deps): add @xyflow/react, mermaid, shiki; add api-client fetch wrappers"
 ```
@@ -324,7 +324,7 @@ describe('deriveNodesEdges', () => {
 - [ ] **Step 2: Run tests — expect FAIL**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/map/__tests__/derive-nodes-edges.test.ts
+cd ~/llm-tutor && npm test src/lib/map/__tests__/derive-nodes-edges.test.ts
 ```
 
 Expected: `FAIL` — "Cannot find module '../derive-nodes-edges'"
@@ -411,7 +411,7 @@ export function deriveNodesEdges(
 - [ ] **Step 4: Run tests — expect PASS**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/map/__tests__/derive-nodes-edges.test.ts
+cd ~/llm-tutor && npm test src/lib/map/__tests__/derive-nodes-edges.test.ts
 ```
 
 Expected: all 6 tests pass.
@@ -419,7 +419,7 @@ Expected: all 6 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/map/derive-nodes-edges.ts src/lib/map/__tests__/derive-nodes-edges.test.ts
 git commit -m "feat(s-map): add deriveNodesEdges pure helper + Vitest tests"
 ```
@@ -463,7 +463,7 @@ export default function TopBar({ streak, dueCardCount, weeklyXp }: TopBarProps) 
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -471,7 +471,7 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add components/TopBar.tsx
 git commit -m "feat(s-map): add TopBar presentational component"
 ```
@@ -542,7 +542,7 @@ export default function JourneyMap({ initialNodes, initialEdges, onNodeClick }: 
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors. (If `@xyflow/react` types are missing, run `npm install --save-dev @types/reactflow` — though v12 ships its own types; check the installed version first.)
@@ -550,7 +550,7 @@ Expected: no errors. (If `@xyflow/react` types are missing, run `npm install --s
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add components/JourneyMap.tsx
 git commit -m "feat(s-map): add JourneyMap React Flow client component"
 ```
@@ -634,7 +634,7 @@ export default async function HomePage() {
 - [ ] **Step 2: Verify the page compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors. If `getCurriculumRepository` or `getStateStore` aren't the names plan-01 exported, adjust the import — the important thing is to call plan-01's public API, not reimplement it.
@@ -642,7 +642,7 @@ Expected: no errors. If `getCurriculumRepository` or `getStateStore` aren't the 
 - [ ] **Step 3: Smoke-test in the browser**
 
 ```bash
-cd /Users/unmukt/llm-tutor && CURRICULUM_DIR=/path/to/your/curriculum npm run dev
+cd ~/llm-tutor && CURRICULUM_DIR=/path/to/your/curriculum npm run dev
 ```
 
 Open `http://localhost:3000`. Expected: top bar shows streak/XP (0 if no state yet), React Flow canvas renders (empty or with nodes from curriculum). No JS console errors about missing modules.
@@ -650,7 +650,7 @@ Open `http://localhost:3000`. Expected: top bar shows streak/XP (0 if no state y
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add app/page.tsx
 git commit -m "feat(s-map): add journey map home page (server component)"
 ```
@@ -749,7 +749,7 @@ describe('resolvePass', () => {
 - [ ] **Step 2: Run tests — expect FAIL**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/reader/__tests__/select-pass.test.ts
+cd ~/llm-tutor && npm test src/lib/reader/__tests__/select-pass.test.ts
 ```
 
 Expected: FAIL — "Cannot find module '../select-pass'"
@@ -800,7 +800,7 @@ export function resolvePass(mod: Module, key: DepthPass): ResolvedPass {
 - [ ] **Step 4: Run tests — expect PASS**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/reader/__tests__/select-pass.test.ts
+cd ~/llm-tutor && npm test src/lib/reader/__tests__/select-pass.test.ts
 ```
 
 Expected: all 6 tests pass.
@@ -847,7 +847,7 @@ export default function DepthToggle({ current, onChange }: DepthToggleProps) {
 - [ ] **Step 6: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -855,7 +855,7 @@ Expected: no errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/reader/select-pass.ts src/lib/reader/__tests__/select-pass.test.ts components/DepthToggle.tsx
 git commit -m "feat(s-reader): add resolvePass helper + DepthToggle component"
 ```
@@ -949,7 +949,7 @@ describe('parseFlashcards', () => {
 - [ ] **Step 2: Run parser tests — expect FAIL**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/parse-flashcards.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/parse-flashcards.test.ts
 ```
 
 Expected: FAIL — "Cannot find module '../parse-flashcards'"
@@ -1012,7 +1012,7 @@ export function parseFlashcards(raw: string): Flashcard[] {
 - [ ] **Step 4: Run parser tests — expect PASS**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/parse-flashcards.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/parse-flashcards.test.ts
 ```
 
 Expected: all 6 tests pass.
@@ -1085,7 +1085,7 @@ describe('getDueCards', () => {
 - [ ] **Step 6: Run due-cards tests — expect FAIL**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/due-cards.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/due-cards.test.ts
 ```
 
 Expected: FAIL — "Cannot find module '../due-cards'"
@@ -1157,7 +1157,7 @@ export function countDueCards(
 - [ ] **Step 8: Run due-cards tests — expect PASS**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/due-cards.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/due-cards.test.ts
 ```
 
 Expected: all 5 tests pass.
@@ -1211,7 +1211,7 @@ describe('applySRResult', () => {
 - [ ] **Step 10: Run SR tests — expect FAIL**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/sr-update.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/sr-update.test.ts
 ```
 
 Expected: FAIL — "Cannot find module '../sr-update'"
@@ -1263,7 +1263,7 @@ export function applySRResult(
 - [ ] **Step 12: Run SR tests — expect PASS**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test src/lib/cards/__tests__/sr-update.test.ts
+cd ~/llm-tutor && npm test src/lib/cards/__tests__/sr-update.test.ts
 ```
 
 Expected: all 6 tests pass.
@@ -1326,7 +1326,7 @@ export default async function HomePage() {
 - [ ] **Step 14: Run all tests**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test
+cd ~/llm-tutor && npm test
 ```
 
 Expected: all tests pass (parser + due-cards + sr-update + map + reader).
@@ -1334,7 +1334,7 @@ Expected: all tests pass (parser + due-cards + sr-update + map + reader).
 - [ ] **Step 15: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/cards/ app/page.tsx
 git commit -m "feat(s-cards): add flashcard parser, due-card filter, SR update logic + wire into homepage"
 ```
@@ -1466,7 +1466,7 @@ export default function DiagramPane({ diagrams }: DiagramPaneProps) {
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -1474,7 +1474,7 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add components/DiagramPane.tsx
 git commit -m "feat(s-reader): add DiagramPane (mermaid + shiki, lazy client import)"
 ```
@@ -1646,13 +1646,13 @@ export default function ModuleReaderClient({ moduleId: _moduleId, passHtml }: Mo
 - [ ] **Step 3: Install remark-html (needed for `mdToHtml`)**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm install remark-html
+cd ~/llm-tutor && npm install remark-html
 ```
 
 - [ ] **Step 4: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -1660,7 +1660,7 @@ Expected: no errors.
 - [ ] **Step 5: Smoke-test in the browser**
 
 ```bash
-cd /Users/unmukt/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
+cd ~/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
 ```
 
 Navigate to `http://localhost:3000/module/B01` (substitute a real module id). Expected: Why-this-matters banner renders (or shows the warning), DepthToggle buttons appear, Engineer pass renders by default, clicking "Dumb it down" swaps content (or shows "not authored yet").
@@ -1668,7 +1668,7 @@ Navigate to `http://localhost:3000/module/B01` (substitute a real module id). Ex
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add app/module components/ModuleReaderClient.tsx
 git commit -m "feat(s-reader): add module reader page + client depth toggle wrapper"
 ```
@@ -1847,7 +1847,7 @@ export default async function FlashcardsPage() {
 - [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -1855,7 +1855,7 @@ Expected: no errors.
 - [ ] **Step 4: Run all tests**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test
+cd ~/llm-tutor && npm test
 ```
 
 Expected: all tests pass (16 total across map, reader, cards suites).
@@ -1863,7 +1863,7 @@ Expected: all tests pass (16 total across map, reader, cards suites).
 - [ ] **Step 5: Smoke-test in the browser**
 
 ```bash
-cd /Users/unmukt/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
+cd ~/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
 ```
 
 Navigate to `http://localhost:3000/flashcards`. Expected: page loads with due card count, first card front visible, "Reveal answer" button present. Click reveals back. "Good" and "Again" buttons fire and advance to next card. Final card shows "Done for today!". No JS console errors.
@@ -1871,7 +1871,7 @@ Navigate to `http://localhost:3000/flashcards`. Expected: page loads with due ca
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add components/FlashcardReview.tsx app/flashcards/page.tsx
 git commit -m "feat(s-cards): add FlashcardReview component + flashcards page"
 ```
@@ -1949,7 +1949,7 @@ Edit `app/page.tsx` — the `<JourneyMap>` JSX line no longer needs an `onNodeCl
 - [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -1957,7 +1957,7 @@ Expected: no errors.
 - [ ] **Step 4: Run all tests**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test
+cd ~/llm-tutor && npm test
 ```
 
 Expected: all tests still pass (no logic changed).
@@ -1965,7 +1965,7 @@ Expected: all tests still pass (no logic changed).
 - [ ] **Step 5: Smoke-test navigation**
 
 ```bash
-cd /Users/unmukt/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
+cd ~/llm-tutor && CURRICULUM_DIR=/path/to/curriculum npm run dev
 ```
 
 Open `http://localhost:3000`. Click a node on the map. Expected: browser navigates to `/module/<id>` and the reader page loads.
@@ -1973,7 +1973,7 @@ Open `http://localhost:3000`. Click a node on the map. Expected: browser navigat
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add components/JourneyMap.tsx app/page.tsx
 git commit -m "feat(s-map): wire node click → module reader navigation"
 ```
@@ -1985,7 +1985,7 @@ git commit -m "feat(s-map): wire node click → module reader navigation"
 - [ ] **Step 1: Run all Vitest tests**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test
+cd ~/llm-tutor && npm test
 ```
 
 Expected output (all pass):
@@ -2003,7 +2003,7 @@ Tests      29 passed
 - [ ] **Step 2: Full TypeScript check**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx tsc --noEmit
+cd ~/llm-tutor && npx tsc --noEmit
 ```
 
 Expected: zero errors.
@@ -2011,7 +2011,7 @@ Expected: zero errors.
 - [ ] **Step 3: Commit (if any stray fixes were made)**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add -A
 git status  # verify nothing unintended is staged
 git commit -m "chore: plan-02 complete — all tests pass, zero TS errors"

@@ -29,7 +29,7 @@
 
 - [ ] **Step 1: Confirm no dependency change is needed**
 
-Run: `git -C /Users/unmukt/llm-tutor diff --quiet package.json && echo "package.json unchanged — good"`
+Run: `git -C ~/llm-tutor diff --quiet package.json && echo "package.json unchanged — good"`
 Expected: prints `package.json unchanged — good`
 
 (No commit for this task — it is a recorded decision only.)
@@ -106,7 +106,7 @@ describe('ringVisual', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- progress-ring`
+Run: `cd ~/llm-tutor && npm test -- progress-ring`
 Expected: FAIL — `Failed to resolve import "@/lib/ui/progress-ring"` / module not found.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -179,18 +179,18 @@ export function ringVisual(mastery: Mastery, openDiagnosis = false): RingVisual 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- progress-ring`
+Run: `cd ~/llm-tutor && npm test -- progress-ring`
 Expected: PASS — 7 tests pass.
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ui/progress-ring.ts src/lib/ui/__tests__/progress-ring.test.ts
 git commit -m "$(cat <<'EOF'
 feat(v1a): pure mastery→ring-visual mapping helper
@@ -246,7 +246,7 @@ describe('ringGeometry', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- progress-ring`
+Run: `cd ~/llm-tutor && npm test -- progress-ring`
 Expected: FAIL — `ringGeometry` is not exported.
 
 - [ ] **Step 3: Write minimal implementation (append to `progress-ring.ts`)**
@@ -275,18 +275,18 @@ export function ringGeometry(radius: number, fraction: number): RingGeometry {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- progress-ring`
+Run: `cd ~/llm-tutor && npm test -- progress-ring`
 Expected: PASS — all `ringVisual` + `ringGeometry` tests pass.
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ui/progress-ring.ts src/lib/ui/__tests__/progress-ring.test.ts
 git commit -m "$(cat <<'EOF'
 feat(v1a): pure SVG ring geometry helper (dasharray math)
@@ -336,7 +336,7 @@ describe('motionDurationMs', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- motion`
+Run: `cd ~/llm-tutor && npm test -- motion`
 Expected: FAIL — `Failed to resolve import "@/lib/ui/motion"`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -373,18 +373,18 @@ export function prefersReducedMotion(): boolean {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- motion`
+Run: `cd ~/llm-tutor && npm test -- motion`
 Expected: PASS — 4 tests pass.
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ui/motion.ts src/lib/ui/__tests__/motion.test.ts
 git commit -m "$(cat <<'EOF'
 feat(v1a): reduced-motion gate helper + SSR-safe probe
@@ -454,7 +454,7 @@ describe('modulesReachingVerified', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- juice`
+Run: `cd ~/llm-tutor && npm test -- juice`
 Expected: FAIL — `Failed to resolve import "@/lib/ui/juice"`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -496,18 +496,18 @@ export function modulesReachingVerified(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- juice`
+Run: `cd ~/llm-tutor && npm test -- juice`
 Expected: PASS — all `xpDelta` + `modulesReachingVerified` tests pass.
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ui/juice.ts src/lib/ui/__tests__/juice.test.ts
 git commit -m "$(cat <<'EOF'
 feat(v1a): pure juice detectors (xp delta + level-up to verified)
@@ -637,7 +637,7 @@ describe('buildSidebarModel', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- sidebar-model`
+Run: `cd ~/llm-tutor && npm test -- sidebar-model`
 Expected: FAIL — `Failed to resolve import "@/lib/ui/sidebar-model"`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -697,18 +697,18 @@ export function buildSidebarModel(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test -- sidebar-model`
+Run: `cd ~/llm-tutor && npm test -- sidebar-model`
 Expected: PASS — 4 tests pass.
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/lib/ui/sidebar-model.ts src/lib/ui/__tests__/sidebar-model.test.ts
 git commit -m "$(cat <<'EOF'
 feat(v1a): pure sidebar view-model (group by track + resolve mastery)
@@ -813,18 +813,18 @@ export default function ProgressRing({
 
 - [ ] **Step 2: Typecheck the new component in isolation**
 
-Run: `cd /Users/unmukt/llm-tutor && npm run typecheck`
+Run: `cd ~/llm-tutor && npm run typecheck`
 Expected: PASS — no type errors.
 
 - [ ] **Step 3: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed. (No render test — vitest only matches `.test.ts`; correctness of the `.tsx` is enforced by typecheck + build. The pure mapping/geometry it depends on is already covered by Tasks 1–2.)
 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/components/ProgressRing.tsx
 git commit -m "$(cat <<'EOF'
 feat(v1a): ProgressRing — animated, prop-driven SVG ring
@@ -961,13 +961,13 @@ export default function Sidebar({ groups }: SidebarProps) {
 
 - [ ] **Step 2: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/components/Sidebar.tsx
 git commit -m "$(cat <<'EOF'
 feat(v1a): Sidebar — track-grouped modules with rings, collapse, active
@@ -993,7 +993,7 @@ The `(shell)` route group adds NO URL segment — `/`, `/module/[id]`, `/module/
 - [ ] **Step 1: Move the route files (preserve git history)**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 mkdir -p "app/(shell)"
 git mv app/page.tsx "app/(shell)/page.tsx"
 git mv app/module "app/(shell)/module"
@@ -1002,7 +1002,7 @@ git mv app/flashcards "app/(shell)/flashcards"
 
 - [ ] **Step 2: Verify the move left `app/api` and `app/layout.tsx` in place**
 
-Run: `cd /Users/unmukt/llm-tutor && ls app && echo '---' && ls "app/(shell)"`
+Run: `cd ~/llm-tutor && ls app && echo '---' && ls "app/(shell)"`
 Expected: `app` contains `(shell)`, `api`, `globals.css`, `layout.tsx`. `app/(shell)` contains `flashcards`, `module`, `page.tsx`.
 
 - [ ] **Step 3: Create the shell layout**
@@ -1050,18 +1050,18 @@ export default async function ShellLayout({ children }: { children: ReactNode })
 
 - [ ] **Step 4: Verify all four routes still render + build**
 
-Run: `cd /Users/unmukt/llm-tutor && npm run build`
+Run: `cd ~/llm-tutor && npm run build`
 Expected: build succeeds and the route list includes `/`, `/module/[id]`, `/module/[id]/assess`, `/flashcards` (NOT `/(shell)/...` — the group is invisible in URLs).
 
 - [ ] **Step 5: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add -A
 git commit -m "$(cat <<'EOF'
 feat(v1a): app shell — (shell) route group with persistent Sidebar layout
@@ -1193,13 +1193,13 @@ Change the returned JSX of the `curriculumDir`-present branch to:
 
 - [ ] **Step 4: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/components/XpPop.tsx app/globals.css "app/(shell)/layout.tsx"
 git commit -m "$(cat <<'EOF'
 feat(v1a): XP-pop toast driven by pure xpDelta + window event
@@ -1349,13 +1349,13 @@ Append to `app/globals.css`:
 
 - [ ] **Step 4: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/components/LevelUpFlourish.tsx app/globals.css "app/(shell)/layout.tsx"
 git commit -m "$(cat <<'EOF'
 feat(v1a): level-up flourish driven by pure verified-transition detector
@@ -1440,13 +1440,13 @@ Change the content column in the `curriculumDir`-present branch:
 
 - [ ] **Step 4: Full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor
+cd ~/llm-tutor
 git add src/components/RouteTransition.tsx app/globals.css "app/(shell)/layout.tsx"
 git commit -m "$(cat <<'EOF'
 feat(v1a): CSS route cross-fade transition in the app shell
@@ -1466,7 +1466,7 @@ Confirm the shell renders, the sidebar lists modules with rings, navigation work
 
 - [ ] **Step 1: Final full green gate**
 
-Run: `cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
+Run: `cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build`
 Expected: all four succeed.
 
 - [ ] **Step 2: Manual smoke (only if a curriculum dir is available)**
@@ -1474,7 +1474,7 @@ Expected: all four succeed.
 Run (substitute the real curriculum path):
 
 ```bash
-cd /Users/unmukt/llm-tutor && CURRICULUM_DIR=/absolute/path/to/curriculum npm run dev
+cd ~/llm-tutor && CURRICULUM_DIR=/absolute/path/to/curriculum npm run dev
 ```
 
 Then in the browser:
@@ -1488,7 +1488,7 @@ Expected: all behaviors as described. (If no curriculum dir is available, the un
 
 - [ ] **Step 3: Confirm the working tree is clean (all work committed)**
 
-Run: `cd /Users/unmukt/llm-tutor && git status --porcelain`
+Run: `cd ~/llm-tutor && git status --porcelain`
 Expected: empty output (nothing uncommitted).
 
 ---

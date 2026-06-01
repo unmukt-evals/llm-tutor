@@ -240,7 +240,7 @@ Copy 3 representative source entries from the live `_sources.md` into `fixtures/
 - One with multiple `Quote:` bullets.
 - One under each of two different `## Cluster` headings (proves cluster bookkeeping).
 
-Live file lives at `/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_sources.md`. Read it (Read tool) and copy the chosen blocks verbatim — the parser must work against the real shape.
+Live file lives at `~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_sources.md`. Read it (Read tool) and copy the chosen blocks verbatim — the parser must work against the real shape.
 
 - [ ] **Step 2: Write the failing tests**
 

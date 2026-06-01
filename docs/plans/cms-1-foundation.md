@@ -63,7 +63,7 @@
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm install better-sqlite3@^11.5.0 server-only@^0.0.1 && npm install --save-dev @types/better-sqlite3@^7.6.12
+cd ~/llm-tutor && npm install better-sqlite3@^11.5.0 server-only@^0.0.1 && npm install --save-dev @types/better-sqlite3@^7.6.12
 ```
 
 Expected: install succeeds, `node_modules/better-sqlite3/build/Release/better_sqlite3.node` present (native build worked on Node 22).
@@ -73,14 +73,14 @@ Expected: install succeeds, `node_modules/better-sqlite3/build/Release/better_sq
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && node -e "const db = require('better-sqlite3')(':memory:'); db.exec('CREATE TABLE t(x INT)'); console.log(db.prepare('SELECT 1 AS one').get());"
+cd ~/llm-tutor && node -e "const db = require('better-sqlite3')(':memory:'); db.exec('CREATE TABLE t(x INT)'); console.log(db.prepare('SELECT 1 AS one').get());"
 ```
 
 Expected: prints `{ one: 1 }`. If the binding fails to load, abort — do not proceed.
 
 - [ ] **Step 3: Append sqlite-cache patterns to `.gitignore`**
 
-Edit `/Users/unmukt/llm-tutor/.gitignore` — append these lines at the end (before the trailing newline if present):
+Edit `~/llm-tutor/.gitignore` — append these lines at the end (before the trailing newline if present):
 
 ```
 # CMS indexed cache (built at runtime under CURRICULUM_DIR)
@@ -95,8 +95,8 @@ Edit `/Users/unmukt/llm-tutor/.gitignore` — append these lines at the end (bef
 Run:
 
 ```bash
-mkdir -p /Users/unmukt/llm-tutor/src/lib/cms/migrations /Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/mcq
-: > /Users/unmukt/llm-tutor/src/lib/cms/.keep
+mkdir -p ~/llm-tutor/src/lib/cms/migrations ~/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/mcq
+: > ~/llm-tutor/src/lib/cms/.keep
 ```
 
 - [ ] **Step 5: Run the four gates**
@@ -104,7 +104,7 @@ mkdir -p /Users/unmukt/llm-tutor/src/lib/cms/migrations /Users/unmukt/llm-tutor/
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all four pass, 490 tests still pass.
@@ -114,7 +114,7 @@ Expected: all four pass, 490 tests still pass.
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && git checkout -b build/cms-1 2>/dev/null || git checkout build/cms-1
+cd ~/llm-tutor && git checkout -b build/cms-1 2>/dev/null || git checkout build/cms-1
 git add package.json package-lock.json .gitignore src/lib/cms/.keep
 git commit -m "chore(cms): add better-sqlite3 dep + cms scaffold + gitignore
 
@@ -134,7 +134,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/hash.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/hash.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -170,14 +170,14 @@ describe('computeContentHash', () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/hash.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/hash.test.ts
 ```
 
 Expected: FAIL with module-not-found for `@/lib/cms/hash`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/hash.ts`:
+Create `~/llm-tutor/src/lib/cms/hash.ts`:
 
 ```ts
 import { createHash } from 'node:crypto';
@@ -197,7 +197,7 @@ export function computeContentHash(text: string): string {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/hash.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/hash.test.ts
 ```
 
 Expected: PASS, 5 tests.
@@ -207,7 +207,7 @@ Expected: PASS, 5 tests.
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green.
@@ -215,7 +215,7 @@ Expected: all green.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add src/lib/cms/hash.ts src/lib/cms/__tests__/hash.test.ts
+cd ~/llm-tutor && git add src/lib/cms/hash.ts src/lib/cms/__tests__/hash.test.ts
 git commit -m "feat(cms): add computeContentHash (sha256 hex, pure)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -230,7 +230,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the types module**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/types.ts`:
+Create `~/llm-tutor/src/lib/cms/types.ts`:
 
 ```ts
 // CMS-domain types. The READ API of the CMS index returns the existing UI
@@ -332,7 +332,7 @@ export interface SourceRowsAsRendered {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green.
@@ -340,7 +340,7 @@ Expected: all green.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add src/lib/cms/types.ts
+cd ~/llm-tutor && git add src/lib/cms/types.ts
 git commit -m "feat(cms): add CMS-domain types (StoredModule, IndexRow, EntityKind)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -356,7 +356,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the initial migration**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/migrations/001_initial.sql`:
+Create `~/llm-tutor/src/lib/cms/migrations/001_initial.sql`:
 
 ```sql
 -- CMS Phase 1 — initial schema.
@@ -537,7 +537,7 @@ CREATE INDEX IF NOT EXISTS idx_revisions_kind_entity ON revisions(kind, entity_i
 
 - [ ] **Step 2: Add a pointer file**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/schema.sql`:
+Create `~/llm-tutor/src/lib/cms/schema.sql`:
 
 ```sql
 -- Canonical schema lives in src/lib/cms/migrations/. This file exists as a
@@ -551,7 +551,7 @@ Create `/Users/unmukt/llm-tutor/src/lib/cms/schema.sql`:
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green (no new code paths yet).
@@ -559,7 +559,7 @@ Expected: all green (no new code paths yet).
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add src/lib/cms/migrations/001_initial.sql src/lib/cms/schema.sql
+cd ~/llm-tutor && git add src/lib/cms/migrations/001_initial.sql src/lib/cms/schema.sql
 git commit -m "feat(cms): add 001_initial.sql migration (modules, pools, flashcards, state, sources)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -575,7 +575,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/db.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/db.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -648,14 +648,14 @@ describe('cms/db', () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/db.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/db.test.ts
 ```
 
 Expected: FAIL with module-not-found for `@/lib/cms/db`.
 
 - [ ] **Step 3: Implement `db.ts`**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/db.ts`:
+Create `~/llm-tutor/src/lib/cms/db.ts`:
 
 ```ts
 import 'server-only';
@@ -736,7 +736,7 @@ export function runMigrations(db: BSDatabase, dir: string = migrationsDir()): vo
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/db.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/db.test.ts
 ```
 
 Expected: PASS, 3 tests.
@@ -746,7 +746,7 @@ Expected: PASS, 3 tests.
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green. If `next build` complains about `server-only` being imported from a server-only context — that is correct behavior; the build only fails if a CLIENT component imports it.
@@ -754,7 +754,7 @@ Expected: all green. If `next build` complains about `server-only` being importe
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add src/lib/cms/db.ts src/lib/cms/__tests__/db.test.ts
+cd ~/llm-tutor && git add src/lib/cms/db.ts src/lib/cms/__tests__/db.test.ts
 git commit -m "feat(cms): add getDb + runMigrations (WAL, FKs ON, idempotent)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -774,7 +774,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Copy + extend the module fixture**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/B01-eval-harnesses.md`:
+Create `~/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/B01-eval-harnesses.md`:
 
 ```markdown
 ---
@@ -846,7 +846,7 @@ DC2: Add a tie-break grader.
 
 - [ ] **Step 2: Write the flashcards fixture**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_flashcards.md`:
+Create `~/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_flashcards.md`:
 
 ```markdown
 # Flashcards
@@ -857,7 +857,7 @@ Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_flash
 
 - [ ] **Step 3: Write the MCQ pool fixture**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/mcq/B01.json`:
+Create `~/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/mcq/B01.json`:
 
 ```json
 {
@@ -911,7 +911,7 @@ Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/mcq/B0
 
 - [ ] **Step 4: Write the state-sidecar fixture**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_llmtutor-state.json`:
+Create `~/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_llmtutor-state.json`:
 
 ```json
 {
@@ -943,7 +943,7 @@ Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/fixtures/curriculum/_llmtu
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && node -e "
+cd ~/llm-tutor && node -e "
 const fs = require('node:fs');
 JSON.parse(fs.readFileSync('src/lib/cms/__tests__/fixtures/curriculum/mcq/B01.json','utf8'));
 JSON.parse(fs.readFileSync('src/lib/cms/__tests__/fixtures/curriculum/_llmtutor-state.json','utf8'));
@@ -956,7 +956,7 @@ Expected: prints `ok`.
 - [ ] **Step 6: Run gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/__tests__/fixtures
 git commit -m "test(cms): add mini-curriculum fixtures (B01 module + pool + flashcards + state)
 
@@ -973,7 +973,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/indexer-module.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/indexer-module.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1037,14 +1037,14 @@ describe("indexEntity('module', 'B01')", () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-module.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-module.test.ts
 ```
 
 Expected: FAIL with module-not-found for `@/lib/cms/indexer`.
 
 - [ ] **Step 3: Implement `indexer.ts` (module-only, scaffold for later tasks)**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/indexer.ts`:
+Create `~/llm-tutor/src/lib/cms/indexer.ts`:
 
 ```ts
 import { promises as fsp } from 'node:fs';
@@ -1327,7 +1327,7 @@ export function readModule(db: BSDatabase, id: string): Module | null {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-module.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-module.test.ts
 ```
 
 Expected: PASS, 3 tests.
@@ -1335,7 +1335,7 @@ Expected: PASS, 3 tests.
 - [ ] **Step 5: Gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/indexer.ts src/lib/cms/__tests__/indexer-module.test.ts
 git commit -m "feat(cms): indexEntity('module') round-trip with hash-skip + readModule
 
@@ -1352,7 +1352,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/indexer-pool.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/indexer-pool.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1399,14 +1399,14 @@ describe("indexEntity('pool', 'B01')", () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-pool.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-pool.test.ts
 ```
 
 Expected: FAIL — `indexEntity: kind "pool" not implemented yet`.
 
 - [ ] **Step 3: Extend `indexer.ts` with pool support**
 
-Edit `/Users/unmukt/llm-tutor/src/lib/cms/indexer.ts`:
+Edit `~/llm-tutor/src/lib/cms/indexer.ts`:
 
 - At the top, ADD this import next to the existing `parseModule` import:
 
@@ -1542,7 +1542,7 @@ export function readPool(db: BSDatabase, id: string): MCQPool | null {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-pool.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-pool.test.ts
 ```
 
 Expected: PASS, 2 tests.
@@ -1550,7 +1550,7 @@ Expected: PASS, 2 tests.
 - [ ] **Step 5: Gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/indexer.ts src/lib/cms/__tests__/indexer-pool.test.ts
 git commit -m "feat(cms): indexEntity('pool') round-trip with normalized moduleId
 
@@ -1567,7 +1567,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/indexer-flashcards.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/indexer-flashcards.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1601,14 +1601,14 @@ describe("indexEntity('flashcards', '_flashcards')", () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-flashcards.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-flashcards.test.ts
 ```
 
 Expected: FAIL — `kind "flashcards" not implemented yet`.
 
 - [ ] **Step 3: Extend `indexer.ts` with flashcards support**
 
-Edit `/Users/unmukt/llm-tutor/src/lib/cms/indexer.ts`:
+Edit `~/llm-tutor/src/lib/cms/indexer.ts`:
 
 - Add imports at the top:
 
@@ -1690,7 +1690,7 @@ export function readFlashcards(db: BSDatabase): Flashcard[] {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-flashcards.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-flashcards.test.ts
 ```
 
 Expected: PASS, 1 test.
@@ -1698,7 +1698,7 @@ Expected: PASS, 1 test.
 - [ ] **Step 5: Gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/indexer.ts src/lib/cms/__tests__/indexer-flashcards.test.ts
 git commit -m "feat(cms): indexEntity('flashcards') round-trip via parseFlashcards
 
@@ -1715,7 +1715,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/indexer-state.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/indexer-state.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1775,14 +1775,14 @@ describe('indexState', () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-state.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-state.test.ts
 ```
 
 Expected: FAIL — `indexState` / `readModuleState` / `readAppState` not exported.
 
 - [ ] **Step 3: Extend `indexer.ts`**
 
-Edit `/Users/unmukt/llm-tutor/src/lib/cms/indexer.ts`:
+Edit `~/llm-tutor/src/lib/cms/indexer.ts`:
 
 - Add imports at the top:
 
@@ -1905,7 +1905,7 @@ export function readAppState(db: BSDatabase): Pick<TutorState, 'version' | 'xp' 
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-state.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-state.test.ts
 ```
 
 Expected: PASS, 3 tests. If the third test (missing sidecar) fails because `JsonStateStore` walks past ENOENT to a different error, double-check `fixtures/` has no `_llmtutor-state.json` at its root (only the `curriculum/` subdir does).
@@ -1913,7 +1913,7 @@ Expected: PASS, 3 tests. If the third test (missing sidecar) fails because `Json
 - [ ] **Step 5: Gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/indexer.ts src/lib/cms/__tests__/indexer-state.test.ts
 git commit -m "feat(cms): indexState mirrors sidecar into module_state + app_state
 
@@ -1930,7 +1930,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/indexer-all.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/indexer-all.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -2002,14 +2002,14 @@ describe('indexAll', () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-all.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-all.test.ts
 ```
 
 Expected: FAIL — `indexAll` not exported.
 
 - [ ] **Step 3: Implement `indexAll`**
 
-Edit `/Users/unmukt/llm-tutor/src/lib/cms/indexer.ts` — append:
+Edit `~/llm-tutor/src/lib/cms/indexer.ts` — append:
 
 ```ts
 /**
@@ -2072,7 +2072,7 @@ export async function indexAll(db: BSDatabase, dir: string, fs: FsLike = default
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-all.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/indexer-all.test.ts
 ```
 
 Expected: PASS, 2 tests.
@@ -2080,7 +2080,7 @@ Expected: PASS, 2 tests.
 - [ ] **Step 5: Gates + commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 git add src/lib/cms/indexer.ts src/lib/cms/__tests__/indexer-all.test.ts
 git commit -m "feat(cms): indexAll — full rebuild that logs + skips broken files
 
@@ -2098,7 +2098,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the read-API test (failing)**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/index-read-api.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/index-read-api.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -2151,7 +2151,7 @@ describe('getCmsIndex read API', () => {
 
 - [ ] **Step 2: Write the lazy-and-hash-diff test (failing)**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts`:
+Create `~/llm-tutor/src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts`:
 
 ```ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -2220,14 +2220,14 @@ describe('getCmsIndex lazy-index + hash-diff', () => {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
 ```
 
 Expected: FAIL — module-not-found for `@/lib/cms/index`.
 
 - [ ] **Step 4: Implement `index.ts`**
 
-Create `/Users/unmukt/llm-tutor/src/lib/cms/index.ts`:
+Create `~/llm-tutor/src/lib/cms/index.ts`:
 
 ```ts
 import 'server-only';
@@ -2380,7 +2380,7 @@ export function __resetCmsIndexForTests(): void {
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npx vitest run src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
+cd ~/llm-tutor && npx vitest run src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
 ```
 
 Expected: PASS, 5 tests total. If `index-lazy-and-hash-diff` flakes because the singleton from a previous test bleeds in, add `await import('@/lib/cms/index').then((m) => m.__resetCmsIndexForTests())` in the `beforeEach`. (Each test already uses a fresh `mkdtemp` dir so the singleton map keys are different — no reset needed in practice.)
@@ -2390,7 +2390,7 @@ Expected: PASS, 5 tests total. If `index-lazy-and-hash-diff` flakes because the 
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green, 490 existing tests + ~15 new tests all pass.
@@ -2398,7 +2398,7 @@ Expected: all green, 490 existing tests + ~15 new tests all pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add src/lib/cms/index.ts src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
+cd ~/llm-tutor && git add src/lib/cms/index.ts src/lib/cms/__tests__/index-read-api.test.ts src/lib/cms/__tests__/index-lazy-and-hash-diff.test.ts
 git commit -m "feat(cms): getCmsIndex read API + lazy-index + hash-diff reparse
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -2413,7 +2413,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
+cd ~/llm-tutor && npm test && npm run typecheck && npm run lint && npm run build
 ```
 
 Expected: all green. Note the test count: should be `490 + (5 + 3 + 2 + 1 + 3 + 2 + 3 + 2) = 511` tests passing.
@@ -2423,7 +2423,7 @@ Expected: all green. Note the test count: should be `490 + (5 + 3 + 2 + 1 + 3 + 
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && git diff --name-only $(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD | grep -E '^app/' || echo 'OK: no app/ touched'
+cd ~/llm-tutor && git diff --name-only $(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD | grep -E '^app/' || echo 'OK: no app/ touched'
 ```
 
 Expected: prints `OK: no app/ touched`. If it lists any `app/` file, the plan was deviated from — revert those changes before pushing.
@@ -2433,7 +2433,7 @@ Expected: prints `OK: no app/ touched`. If it lists any `app/` file, the plan wa
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && grep -rE "from '@/lib/cms" app/ src/ 2>/dev/null | grep -v '__tests__' | grep -v 'src/lib/cms/' || echo 'OK: nothing outside src/lib/cms/ imports the cms module yet (Phase 1 is purely additive)'
+cd ~/llm-tutor && grep -rE "from '@/lib/cms" app/ src/ 2>/dev/null | grep -v '__tests__' | grep -v 'src/lib/cms/' || echo 'OK: nothing outside src/lib/cms/ imports the cms module yet (Phase 1 is purely additive)'
 ```
 
 Expected: prints `OK: ...`. If anything matches, that means a Phase 2 swap leaked into Phase 1 — confirm before pushing.
@@ -2447,7 +2447,7 @@ Show the user: branch name (`build/cms-1`), commit count (`git log --oneline mai
 Run:
 
 ```bash
-cd /Users/unmukt/llm-tutor && git push -u origin build/cms-1
+cd ~/llm-tutor && git push -u origin build/cms-1
 ```
 
 Expected: branch pushed; ready for Phase 2 to be planned and built on top.
@@ -2501,7 +2501,7 @@ Expected: branch pushed; ready for Phase 2 to be planned and built on top.
 
 ---
 
-**Plan complete and saved to `/Users/unmukt/llm-tutor/docs/plans/cms-1-foundation.md`. Two execution options:**
+**Plan complete and saved to `~/llm-tutor/docs/plans/cms-1-foundation.md`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** — fresh subagent per task, review between tasks, fast iteration.
 

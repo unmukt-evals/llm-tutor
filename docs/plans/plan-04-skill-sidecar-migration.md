@@ -15,10 +15,10 @@
 | File | Action | Role |
 |---|---|---|
 | `$CURRICULUM_DIR/_llmtutor-state.json` | **Create** (seed script output) | Sidecar — single source of truth |
-| `/Users/unmukt/llm-tutor/scripts/seed-sidecar.py` | **Create** | One-time migration script; reads all module `.md` frontmatter + `_progress.md`; emits valid `TutorState` JSON |
-| `/Users/unmukt/.claude/skills/llm-deep-dive/SKILL.md` | **Modify** (4 Edit-tool edits) | Skill invocation + baseline-checkpoint steps updated to read/write sidecar |
+| `~/llm-tutor/scripts/seed-sidecar.py` | **Create** | One-time migration script; reads all module `.md` frontmatter + `_progress.md`; emits valid `TutorState` JSON |
+| `~/.claude/skills/llm-deep-dive/SKILL.md` | **Modify** (4 Edit-tool edits) | Skill invocation + baseline-checkpoint steps updated to read/write sidecar |
 
-`$CURRICULUM_DIR` = `/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum`
+`$CURRICULUM_DIR` = `~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum`
 
 ---
 
@@ -38,7 +38,7 @@ Both the `llm-deep-dive` skill (Claude agent) and the Next.js app (S-STATE) shar
 ## Task 1 — Create the seed script
 
 **Files:**
-- Create: `/Users/unmukt/llm-tutor/scripts/seed-sidecar.py`
+- Create: `~/llm-tutor/scripts/seed-sidecar.py`
 
 The seed script is run **once** (or re-run safely — it is idempotent: it never overwrites a `mastery` value that is already non-`blank` in an existing sidecar). It reads every `*.md` in `CURRICULUM_DIR`, extracts `module_id` and `baseline_state.current_level` from YAML frontmatter, maps the `current_level` string to a `Mastery` value, and emits a valid `TutorState` v1 JSON.
 
@@ -52,14 +52,14 @@ Mastery mapping from `_progress.md` / frontmatter → sidecar:
 - [ ] **Step 1.1 — Verify the scripts/ directory exists (or create it)**
 
 ```bash
-ls /Users/unmukt/llm-tutor/
+ls ~/llm-tutor/
 ```
 
 Expected: `app/`, `components/`, `src/`, `docs/`, and possibly `scripts/`. If `scripts/` is absent, it will be created by writing the file there.
 
 - [ ] **Step 1.2 — Write the seed script**
 
-Use the Write tool to create `/Users/unmukt/llm-tutor/scripts/seed-sidecar.py` with the following content:
+Use the Write tool to create `~/llm-tutor/scripts/seed-sidecar.py` with the following content:
 
 ```python
 #!/usr/bin/env python3
@@ -349,7 +349,7 @@ if __name__ == "__main__":
 - [ ] **Step 1.3 — Verify the script parses correctly (syntax check)**
 
 ```bash
-python3 -c "import py_compile; py_compile.compile('/Users/unmukt/llm-tutor/scripts/seed-sidecar.py', doraise=True)" && echo "Syntax OK"
+python3 -c "import py_compile; py_compile.compile('~/llm-tutor/scripts/seed-sidecar.py', doraise=True)" && echo "Syntax OK"
 ```
 
 Expected output: `Syntax OK`
@@ -357,8 +357,8 @@ Expected output: `Syntax OK`
 - [ ] **Step 1.4 — Dry-run the script against the real curriculum directory**
 
 ```bash
-python3 /Users/unmukt/llm-tutor/scripts/seed-sidecar.py \
-  --curriculum-dir "/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum" \
+python3 ~/llm-tutor/scripts/seed-sidecar.py \
+  --curriculum-dir "~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum" \
   --dry-run 2>&1 | head -60
 ```
 
@@ -377,14 +377,14 @@ Verify manually:
 - [ ] **Step 2.1 — Run the seed script for real**
 
 ```bash
-python3 /Users/unmukt/llm-tutor/scripts/seed-sidecar.py \
-  --curriculum-dir "/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum"
+python3 ~/llm-tutor/scripts/seed-sidecar.py \
+  --curriculum-dir "~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum"
 ```
 
 Expected: lines like `Found: B01          → mastery='blank'  (B01-eval-harnesses.md)` for each module, ending with:
 
 ```
-Wrote sidecar: /Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json
+Wrote sidecar: ~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json
   Modules seeded: 20
 ```
 
@@ -396,7 +396,7 @@ Wrote sidecar: /Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/
 python3 -c "
 import json, pathlib
 s = json.loads(pathlib.Path(
-  '/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json'
+  '~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json'
 ).read_text())
 print('version:', s['version'])
 print('modules:', sorted(s['modules'].keys()))
@@ -418,8 +418,8 @@ flashcards count: 0
 - [ ] **Step 2.3 — Verify idempotency (re-run produces the same output)**
 
 ```bash
-python3 /Users/unmukt/llm-tutor/scripts/seed-sidecar.py \
-  --curriculum-dir "/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum" \
+python3 ~/llm-tutor/scripts/seed-sidecar.py \
+  --curriculum-dir "~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum" \
   --dry-run 2>&1 | grep -c "Preserve:"
 ```
 
@@ -430,7 +430,7 @@ Expected: `20` (or the same count as Step 2.1's "Modules seeded") — every modu
 ## Task 3 — Edit SKILL.md: "On invocation" step (read mastery from sidecar)
 
 **Files:**
-- Modify: `/Users/unmukt/.claude/skills/llm-deep-dive/SKILL.md`
+- Modify: `~/.claude/skills/llm-deep-dive/SKILL.md`
 
 The current "On invocation" block reads `_progress.md` to surface current state. After this edit it reads the sidecar instead, then renders a human-readable summary from it. `_progress.md` is retained as a mirror reference but no longer the source of truth.
 
@@ -438,7 +438,7 @@ The Edit tool is used with exact-string replacements. **No sed. No regex file mu
 
 - [ ] **Step 3.1 — Read SKILL.md to confirm the exact string to replace**
 
-Read `/Users/unmukt/.claude/skills/llm-deep-dive/SKILL.md` lines 19–28 (the "On invocation" block). Confirm the following exact text is present:
+Read `~/.claude/skills/llm-deep-dive/SKILL.md` lines 19–28 (the "On invocation" block). Confirm the following exact text is present:
 
 ```
 ## On invocation — first thing, every time
@@ -588,7 +588,7 @@ No code is run in this task — it is a structured verification of the plan's tw
 - [ ] **Step 7.1 — Verify SKILL.md has exactly 4 edited regions and no stale `_progress.md` mastery-write references**
 
 ```bash
-grep -n "_progress.md" /Users/unmukt/.claude/skills/llm-deep-dive/SKILL.md
+grep -n "_progress.md" ~/.claude/skills/llm-deep-dive/SKILL.md
 ```
 
 Expected: `_progress.md` still appears in non-mastery contexts (e.g. the Storage section MIRROR line, the `_design.md` / `_curriculum.md` / `_flashcards.md` lines, session-log prose references). It should NOT appear as the target for `baseline_state` writes or as the mastery source of truth. Manually check each hit and confirm.
@@ -599,7 +599,7 @@ Expected: `_progress.md` still appears in non-mastery contexts (e.g. the Storage
 python3 -c "
 import json, pathlib
 path = pathlib.Path(
-  '/Users/unmukt/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json'
+  '~/Obsidian/Trustevals/Trustevals/Operations/Learning/LLM-Curriculum/_llmtutor-state.json'
 )
 assert path.exists(), 'sidecar missing'
 s = json.loads(path.read_text())
@@ -635,7 +635,7 @@ Read the first 15 lines of `_progress.md` and confirm the YAML frontmatter and h
 - [ ] **Step 8.1 — Stage and commit the seed script**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git add scripts/seed-sidecar.py docs/plans/plan-04-skill-sidecar-migration.md
+cd ~/llm-tutor && git add scripts/seed-sidecar.py docs/plans/plan-04-skill-sidecar-migration.md
 git commit -m "$(cat <<'EOF'
 feat(state): add sidecar seed script + plan-04 migration plan
 
@@ -652,7 +652,7 @@ EOF
 - [ ] **Step 8.2 — Confirm git status is clean**
 
 ```bash
-cd /Users/unmukt/llm-tutor && git status
+cd ~/llm-tutor && git status
 ```
 
 Expected: `nothing to commit, working tree clean`
