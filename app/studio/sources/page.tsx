@@ -24,20 +24,20 @@ export default async function SourcesListPage() {
         <h1 className="text-2xl font-semibold">Sources ({sources.length})</h1>
         <Link
           href="/studio/sources/new"
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium hover:bg-emerald-500"
+          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
         >
           + Add source
         </Link>
       </div>
 
       {sources.length === 0 ? (
-        <p className="text-sm text-neutral-400">
-          No sources yet — click <strong className="text-white">+ Add source</strong> to create one.
+        <p className="text-sm text-slate-500">
+          No sources yet — click <strong className="text-slate-900">+ Add source</strong> to create one.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-neutral-700">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-800/50 text-left text-xs uppercase text-neutral-400">
+            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600">
               <tr>
                 <th className="px-3 py-2">ID</th>
                 <th className="px-3 py-2">Title</th>
@@ -46,23 +46,23 @@ export default async function SourcesListPage() {
                 <th className="px-3 py-2">Cited by</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800">
+            <tbody className="divide-y divide-slate-100">
               {sources.map((s) => {
                 const citing = cms.getModulesForSource(s.id);
                 return (
-                  <tr key={s.id} className="hover:bg-neutral-800/40">
+                  <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono text-xs">
                       <Link
                         href={`/studio/sources/${s.id}`}
-                        className="text-emerald-400 hover:underline"
+                        className="text-emerald-700 hover:underline"
                       >
                         {s.id}
                       </Link>
                     </td>
                     <td className="px-3 py-2">{s.title}</td>
-                    <td className="px-3 py-2 text-neutral-400">{s.kind}</td>
-                    <td className="px-3 py-2 text-neutral-400">{s.cluster ?? '—'}</td>
-                    <td className="px-3 py-2 text-neutral-400">
+                    <td className="px-3 py-2 text-slate-500">{s.kind}</td>
+                    <td className="px-3 py-2 text-slate-500">{s.cluster ?? '—'}</td>
+                    <td className="px-3 py-2 text-slate-500">
                       {citing.length > 0 ? citing.map((m) => m.id).join(', ') : '—'}
                     </td>
                   </tr>

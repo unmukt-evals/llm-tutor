@@ -22,7 +22,7 @@ export default async function StudioDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Studio</h1>
-      <p className="text-sm text-neutral-400">Authoring surface for the LLM Tutor curriculum.</p>
+      <p className="text-sm text-slate-600">Authoring surface for the LLM Tutor curriculum.</p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <DashboardCard href="/studio/sources" label="Sources" count={sources.length} />
         <DashboardCard href="#" label="Modules" count={curriculum.modules.length} faded />
@@ -46,12 +46,12 @@ function DashboardCard({
 }) {
   const content = (
     <div
-      className={`rounded-lg border border-neutral-700 bg-neutral-800/50 p-4 ${
-        faded ? 'opacity-50' : 'hover:bg-neutral-800'
+      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm ${
+        faded ? 'opacity-50' : 'hover:shadow-md hover:border-slate-300'
       }`}
     >
-      <div className="text-sm text-neutral-400">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{count ?? '—'}</div>
+      <div className="text-sm text-slate-600">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-slate-900">{count ?? '—'}</div>
     </div>
   );
   return faded ? <>{content}</> : <Link href={href}>{content}</Link>;

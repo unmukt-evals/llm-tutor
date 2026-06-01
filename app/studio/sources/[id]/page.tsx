@@ -32,7 +32,7 @@ export default async function SourceDetailPage({ params }: PageProps) {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">
         Edit source ·{' '}
-        <span className="font-mono text-emerald-400">{source.id}</span>
+        <span className="font-mono text-emerald-700">{source.id}</span>
       </h1>
       <SourceEditClient source={source} citingModules={citingModules} />
     </div>
