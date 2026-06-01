@@ -24,7 +24,7 @@ export function moduleFileName(id: string, name: string): string {
 }
 
 /** Guard: throw if a path component contains `/`, `\`, or `..`. */
-function assertSafePathComponent(value: string, label: string): void {
+export function assertSafePathComponent(value: string, label: string): void {
   if (value.includes('/') || value.includes('\\') || value.split(/[\\/]/).includes('..')) {
     throw new Error(`unsafe module path: ${label} contains path separators or '..'`);
   }

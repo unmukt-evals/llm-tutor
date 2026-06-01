@@ -161,6 +161,10 @@ export interface CmsIndex {
   getSourceById(id: string): Source | undefined;
   getSourcesForModule(moduleId: string): Source[];
   getModulesForSource(sourceId: string): Array<{ id: string; name: string }>;
+  /** Ids of every indexed MCQ pool, sorted ASC. Phase 5b: used by Studio Pools
+   *  list page so we don't have to scan the modules table + cms.getPool() once
+   *  per row. */
+  getPoolIds(): string[];
 
   // Phase-3 write helpers (wrappers around the indexer's per-kind writers).
   reindexEntity(kind: EntityKind, id: string): Promise<ReindexResult>;
@@ -579,6 +583,13 @@ function makeIndex(s: Singleton): CmsIndex {
           )
           .all(moduleId) as SourcesRow[]
       ).map(rowToSource);
+    },
+
+    getPoolIds(): string[] {
+      const rows = db
+        .prepare('SELECT module_id FROM mcq_pools ORDER BY module_id ASC')
+        .all() as { module_id: string }[];
+      return rows.map((r) => r.module_id);
     },
 
     getModulesForSource(sourceId: string): Array<{ id: string; name: string }> {
