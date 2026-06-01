@@ -1,8 +1,8 @@
 // app/studio/page.tsx
-// Studio dashboard — Phase 5a skeleton.
-// Shows live counts for Sources (active) and stub cards for Modules / Pools /
-// Drafts (5b/5c, faded). Reads via getCmsIndex — zero network, O(1) from the
-// SQLite mirror.
+// Studio dashboard — Phase 5a skeleton, expanded in 5b.
+// Shows live counts for Sources, Modules, and Pools (all 5b-active), plus a
+// faded Drafts placeholder until Phase 5c absorbs it. Reads via getCmsIndex —
+// zero network, O(1) from the SQLite mirror.
 
 import { getCmsIndex } from '@/lib/cms';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ export default async function StudioDashboardPage() {
   const cms = await getCmsIndex(dir);
   const sources = cms.getSources();
   const curriculum = cms.getCurriculum();
+  const poolIds = cms.getPoolIds();
 
   return (
     <div className="space-y-6">
@@ -25,8 +26,12 @@ export default async function StudioDashboardPage() {
       <p className="text-sm text-slate-600">Authoring surface for the LLM Tutor curriculum.</p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <DashboardCard href="/studio/sources" label="Sources" count={sources.length} />
-        <DashboardCard href="#" label="Modules" count={curriculum.modules.length} faded />
-        <DashboardCard href="#" label="Pools" count={null} faded />
+        <DashboardCard
+          href="/studio/modules"
+          label="Modules"
+          count={curriculum.modules.length}
+        />
+        <DashboardCard href="/studio/pools" label="Pools" count={poolIds.length} />
         <DashboardCard href="#" label="Drafts" count={null} faded />
       </div>
     </div>
