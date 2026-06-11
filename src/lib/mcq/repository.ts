@@ -30,6 +30,12 @@ export function validatePool(pool: unknown): MCQPool {
   const p = pool as Record<string, unknown>;
   if (typeof p.moduleId !== 'string') throw new Error('pool moduleId must be a string');
   if (!Array.isArray(p.questions)) throw new Error('pool questions must be an array');
+  if (p.generatedAt !== undefined && typeof p.generatedAt !== 'string') {
+    throw new Error('pool generatedAt must be a string when present');
+  }
+  if (p.sourceHash !== undefined && typeof p.sourceHash !== 'string') {
+    throw new Error('pool sourceHash must be a string when present');
+  }
 
   for (const raw of p.questions as unknown[]) {
     if (!raw || typeof raw !== 'object') throw new Error('each question must be an object');
@@ -116,6 +122,11 @@ export class FileMCQRepository implements MCQRepository {
     const questions = validated.questions.map(
       (q): MCQQuestion => ({ ...q, moduleId: validated.moduleId }),
     );
-    return { moduleId: validated.moduleId, questions };
+    return {
+      moduleId: validated.moduleId,
+      questions,
+      ...(validated.generatedAt !== undefined ? { generatedAt: validated.generatedAt } : {}),
+      ...(validated.sourceHash !== undefined ? { sourceHash: validated.sourceHash } : {}),
+    };
   }
 }

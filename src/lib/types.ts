@@ -144,6 +144,10 @@ export interface MCQQuestion {
 export interface MCQPool {
   moduleId: string;
   questions: MCQQuestion[];
+  /** ISO-8601 timestamp of when this pool was generated/stamped. Optional: older pools predate it. */
+  generatedAt?: string;
+  /** Content hash of the source module markdown the pool was generated from. Drives refresh-on-change. */
+  sourceHash?: string;
 }
 
 export interface MCQRepository {

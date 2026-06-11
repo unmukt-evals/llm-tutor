@@ -2,7 +2,7 @@
 
 > **Single source of truth for product state.** Read this at the start of any work session; update it before you finish. Mechanism: `CLAUDE.md` instructs every session to do so.
 >
-> **Last updated:** 2026-06-10 · **Branch:** `main` · **Tests:** 734 passing (82 files)
+> **Last updated:** 2026-06-11 · **Branch:** `main` · **Tests:** 738 passing (82 files)
 
 ---
 
@@ -39,8 +39,9 @@
 
 **Studio routes:** `/studio` (dashboard) · `/studio/sources` · `/studio/modules` · `/studio/pools` · `/studio/drafts` · `/studio/drafts/new` · `/studio/cards`.
 
-### Recent fix
+### Recent fixes / enhancements
 - `lazyRefresh` warm-boot bug: new entity kinds (e.g. `source`) were skipped on warm caches; now singleton files are probed every bootstrap. (`src/lib/cms/__tests__/lazy-refresh-source-probe.test.ts`)
+- **Pool provenance + refresh-on-change (2026-06-11):** every MCQ pool now carries `generatedAt` (ISO) + `sourceHash` (hash of the source module markdown). `MCQPool` type / `validatePool` / `loadPool` support the fields. The generator "pulls the latest": on a default run it (re)generates a pool when **missing** or when its module markdown **changed** since `sourceHash`, and backfills the stamp on older pools. B01/B02 are stamped (and protected from auto-regen). New flags: `--dry-run`, `--stamp-only`. Pools are still **generate-once, read-statically** — the app never generates at runtime.
 
 ---
 
@@ -116,7 +117,10 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 
 ```bash
 npm run dev          # local dev server (:3000)
-npm test -- --run    # full vitest suite (734 tests)
+npm test -- --run    # full vitest suite (738 tests)
 npm run build        # production build
-node scripts/generate-pools.mjs [ids...]   # generate missing MCQ pools (idempotent)
+node scripts/generate-pools.mjs              # generate missing + refresh changed + stamp (needs idle API budget)
+node scripts/generate-pools.mjs --dry-run    # preview the plan; no API calls, no writes
+node scripts/generate-pools.mjs --stamp-only # backfill timestamps only; no API — safe anytime
+node scripts/generate-pools.mjs M09 M10      # force-(re)generate specific pools
 ```

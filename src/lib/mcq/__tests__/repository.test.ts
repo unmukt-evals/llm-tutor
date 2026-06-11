@@ -28,6 +28,13 @@ describe('FileMCQRepository.loadPool', () => {
     expect(pool).toBeNull();
   });
 
+  it('preserves generatedAt + sourceHash metadata through load', async () => {
+    const repo = new FileMCQRepository(FIXTURE_DIR, fixtureNamer);
+    const pool = await repo.loadPool('B99');
+    expect(pool!.generatedAt).toBe('2026-06-11T00:00:00.000Z');
+    expect(pool!.sourceHash).toBe('deadbeefcafef00d');
+  });
+
   it('throws a clear error when the file exists but is invalid', async () => {
     // bad-pool.json is written alongside the fixtures as a real (malformed) file
     const repo = new FileMCQRepository(FIXTURE_DIR, () => 'bad-pool.json');
@@ -48,6 +55,20 @@ describe('getMcqRepository factory', () => {
 describe('validatePool', () => {
   it('accepts the valid fixture', () => {
     expect(() => validatePool(B99_POOL)).not.toThrow();
+  });
+
+  it('accepts optional generatedAt + sourceHash when they are strings', () => {
+    const stamped = { ...B99_POOL, generatedAt: '2026-06-11T00:00:00.000Z', sourceHash: 'abc123' };
+    expect(() => validatePool(stamped)).not.toThrow();
+    expect(validatePool(stamped).generatedAt).toBe('2026-06-11T00:00:00.000Z');
+  });
+
+  it('rejects a non-string generatedAt when present', () => {
+    expect(() => validatePool({ ...B99_POOL, generatedAt: 123 } as unknown)).toThrow(/generatedAt/i);
+  });
+
+  it('rejects a non-string sourceHash when present', () => {
+    expect(() => validatePool({ ...B99_POOL, sourceHash: {} } as unknown)).toThrow(/sourceHash/i);
   });
 
   it.each([

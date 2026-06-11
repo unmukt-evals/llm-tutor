@@ -18,14 +18,24 @@
 // Sequential with a 500ms inter-call delay, on purpose: we are sharing the
 // founder's OAuth token, not a billing-rate-limited API key.
 //
+// Every written pool is stamped with `generatedAt` (ISO) and `sourceHash`
+// (a hash of the module markdown it was built from). On a default run the
+// script "pulls the latest": it (re)generates a pool when it is MISSING or
+// when its module markdown has CHANGED since the stored sourceHash, and it
+// backfills the stamp on any up-to-date pool that predates this feature.
+// Reference pools (B01/B02) are never auto-regenerated, only stamped.
+//
 // Usage:
-//   node scripts/generate-pools.mjs              # generate all missing pools
-//   node scripts/generate-pools.mjs M09          # generate ONE pool (overwrites)
-//   node scripts/generate-pools.mjs M09 M10 ...  # generate a specific list
+//   node scripts/generate-pools.mjs              # generate missing + refresh changed + stamp
+//   node scripts/generate-pools.mjs M09          # force-(re)generate ONE pool (overwrites)
+//   node scripts/generate-pools.mjs M09 M10 ...  # force a specific list
+//   node scripts/generate-pools.mjs --dry-run    # print the plan; no API calls, no writes
+//   node scripts/generate-pools.mjs --stamp-only # backfill timestamps only; no API calls
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readdir, writeFile, rename, mkdir, access } from 'node:fs/promises';
+import { readdir, writeFile, readFile, rename, mkdir, access, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -61,7 +71,10 @@ const TARGET_MODULES = [
   { id: 'M10', file: 'M10-gpu-memory.md' },
   { id: 'M11', file: 'M11-long-context.md' },
   { id: 'M12', file: 'M12-agent-memory.md' },
-  // Track B (B01/B02 already done)
+  // Track B — B01/B02 are gold reference pools (REFERENCE_POOLS): never
+  // auto-regenerated, but listed here so a default run can stamp/refresh them.
+  { id: 'B01', file: 'B01-eval-harnesses.md' },
+  { id: 'B02', file: 'B02-rl-post-training-grpo.md' },
   { id: 'B03', file: 'B03-rl-environments-reward-design.md' },
   { id: 'B04', file: 'B04-rl-training-infra-async.md' },
   { id: 'B05', file: 'B05-agent-architecture-fsm.md' },
@@ -321,6 +334,11 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** sha256 of a file's raw bytes — the content hash that drives refresh-on-change. */
+async function hashFile(p) {
+  return createHash('sha256').update(await readFile(p)).digest('hex');
+}
+
 async function generateOne(target) {
   const modulePath = path.join(CURRICULUM_DIR, target.file);
   if (!(await fileExists(modulePath))) {
@@ -379,6 +397,10 @@ async function generateOne(target) {
     };
   }
 
+  // Stamp provenance: when it was generated + a hash of the source module md.
+  poolObj.generatedAt = new Date().toISOString();
+  poolObj.sourceHash = await hashFile(modulePath);
+
   // Write to a tempfile, validate via the TS bridge, then atomic-rename if OK.
   const tmpPath = path.join(
     os.tmpdir(),
@@ -402,71 +424,159 @@ async function generateOne(target) {
   return { id: target.id, status: 'ok', count: n, finalPath };
 }
 
+// Backfill the stamp on an existing pool without regenerating its questions.
+// No API call. `generatedAt` is taken from the pool file's mtime (best honest
+// estimate — we did not generate it now); `sourceHash` is the current module hash.
+async function stampOne(target) {
+  const modulePath = path.join(CURRICULUM_DIR, target.file);
+  const finalPath = path.join(MCQ_DIR, `${target.id}.json`);
+
+  let pool;
+  try {
+    pool = JSON.parse(await readFile(finalPath, 'utf8'));
+  } catch (e) {
+    return { id: target.id, status: 'fail', reason: `read existing pool failed: ${e.message}` };
+  }
+
+  try {
+    pool.sourceHash = await hashFile(modulePath);
+  } catch (e) {
+    return { id: target.id, status: 'fail', reason: `hash module failed: ${e.message}` };
+  }
+  if (!pool.generatedAt) {
+    const st = await stat(finalPath);
+    pool.generatedAt = new Date(st.mtimeMs).toISOString();
+  }
+
+  const tmpPath = path.join(
+    os.tmpdir(),
+    `mcq-stamp-${target.id.replace(/[^A-Za-z0-9._-]/g, '_')}-${process.pid}-${Date.now()}.json`,
+  );
+  await writeFile(tmpPath, JSON.stringify(pool, null, 2) + '\n', 'utf8');
+
+  const verdict = await bridgeValidate(tmpPath);
+  if (!verdict.ok) {
+    return { id: target.id, status: 'fail', reason: `validatePool rejected after stamp: ${verdict.reason}` };
+  }
+  await rename(tmpPath, finalPath);
+  return { id: target.id, status: 'stamped' };
+}
+
+// Decide what to do with one module's pool. Pure-ish (does I/O to read state).
+//   generate   — no pool yet, or forced, or unreadable
+//   regenerate — pool exists but the module markdown changed since sourceHash
+//   stamp      — pool exists + up to date but predates the stamp (no sourceHash)
+//   skip       — up to date, or a protected reference pool, or module .md missing
+async function classify(target, { force }) {
+  const modulePath = path.join(CURRICULUM_DIR, target.file);
+  if (!(await fileExists(modulePath))) {
+    return { target, action: 'skip', reason: `module .md not found: ${target.file}` };
+  }
+  const poolPath = path.join(MCQ_DIR, `${target.id}.json`);
+  if (force) return { target, action: 'generate', reason: 'forced' };
+  if (!(await fileExists(poolPath))) return { target, action: 'generate', reason: 'missing' };
+
+  let existing;
+  try {
+    existing = JSON.parse(await readFile(poolPath, 'utf8'));
+  } catch {
+    return { target, action: 'generate', reason: 'existing pool unreadable' };
+  }
+  if (!existing.sourceHash) return { target, action: 'stamp', reason: 'no stamp yet' };
+
+  const currentHash = await hashFile(modulePath);
+  if (existing.sourceHash === currentHash) return { target, action: 'skip', reason: 'up to date' };
+  if (REFERENCE_POOLS.has(target.id)) {
+    return { target, action: 'skip', reason: 'reference pool changed — protected (force to override)' };
+  }
+  return { target, action: 'regenerate', reason: 'module changed' };
+}
+
 async function main() {
   await ensureMcqDir();
 
-  // Build the work list. CLI args override (specific modules to regenerate);
-  // otherwise: every target whose <id>.json is missing.
-  const cliIds = process.argv.slice(2);
-  let work;
+  const argv = process.argv.slice(2);
+  const dryRun = argv.includes('--dry-run');
+  const stampOnly = argv.includes('--stamp-only');
+  const cliIds = argv.filter((a) => !a.startsWith('--'));
+
+  // Resolve the target set. Explicit ids force (re)generation (unless stamp-only).
+  let considered = TARGET_MODULES;
   if (cliIds.length > 0) {
-    work = TARGET_MODULES.filter((t) => cliIds.includes(t.id));
-    if (work.length !== cliIds.length) {
-      const known = new Set(TARGET_MODULES.map((t) => t.id));
-      const unknown = cliIds.filter((id) => !known.has(id));
-      if (unknown.length > 0) {
-        console.error(`unknown module ids: ${unknown.join(', ')}`);
-        process.exit(2);
+    const known = new Set(TARGET_MODULES.map((t) => t.id));
+    const unknown = cliIds.filter((id) => !known.has(id));
+    if (unknown.length > 0) {
+      console.error(`unknown module ids: ${unknown.join(', ')}`);
+      process.exit(2);
+    }
+    considered = TARGET_MODULES.filter((t) => cliIds.includes(t.id));
+  }
+  const force = cliIds.length > 0 && !stampOnly;
+
+  // Build the plan: one action per module.
+  const plan = [];
+  for (const t of considered) plan.push(await classify(t, { force }));
+
+  // stamp-only: never call the API — downgrade generate/regenerate to skip.
+  if (stampOnly) {
+    for (const p of plan) {
+      if (p.action === 'generate' || p.action === 'regenerate') {
+        p.action = 'skip';
+        p.reason = `${p.reason} (stamp-only)`;
       }
     }
-  } else {
-    const existing = new Set(
-      (await readdir(MCQ_DIR)).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, '')),
-    );
-    work = TARGET_MODULES.filter((t) => !REFERENCE_POOLS.has(t.id) && !existing.has(t.id));
   }
 
-  if (work.length === 0) {
-    console.log('All target pools already exist. Nothing to do.');
+  console.log(`Curriculum: ${CURRICULUM_DIR}`);
+  console.log(`Plan${dryRun ? '  (dry run — no API calls, no writes)' : ''}:`);
+  for (const p of plan) {
+    console.log(`   ${p.action.toUpperCase().padEnd(10)} ${p.target.id}${p.reason ? `  — ${p.reason}` : ''}`);
+  }
+
+  const todo = plan.filter((p) => p.action !== 'skip');
+  if (dryRun || todo.length === 0) {
+    console.log(todo.length === 0 ? '\nNothing to do.' : '');
     return;
   }
-
-  console.log(`Generating ${work.length} pool(s): ${work.map((w) => w.id).join(', ')}`);
-  console.log(`Writing into: ${MCQ_DIR}\n`);
+  console.log('');
 
   const results = [];
-  for (let i = 0; i < work.length; i++) {
-    const t = work[i];
-    process.stdout.write(`[${i + 1}/${work.length}] ${t.id} ... `);
-    const r = await generateOne(t);
+  for (let i = 0; i < todo.length; i++) {
+    const p = todo[i];
+    process.stdout.write(`[${i + 1}/${todo.length}] ${p.action} ${p.target.id} ... `);
+    const r = p.action === 'stamp' ? await stampOne(p.target) : await generateOne(p.target);
     results.push(r);
-    if (r.status === 'ok') {
-      console.log(`OK (${r.count} questions)`);
-    } else if (r.status === 'skip') {
-      console.log(`SKIP — ${r.reason}`);
-    } else {
-      console.log(`FAIL`);
+    if (r.status === 'ok') console.log(`OK (${r.count} questions)`);
+    else if (r.status === 'stamped') console.log('STAMPED');
+    else if (r.status === 'skip') console.log(`SKIP — ${r.reason}`);
+    else {
+      console.log('FAIL');
       console.log(`        ${r.reason.split('\n').join('\n        ')}`);
     }
-    if (i < work.length - 1) await sleep(3000);
+    // Only space out real API calls; no-API stamps run back-to-back.
+    const apiCall = p.action === 'generate' || p.action === 'regenerate';
+    if (apiCall && i < todo.length - 1) await sleep(3000);
   }
 
   // Summary
   const ok = results.filter((r) => r.status === 'ok');
+  const stamped = results.filter((r) => r.status === 'stamped');
   const fail = results.filter((r) => r.status === 'fail');
   const skip = results.filter((r) => r.status === 'skip');
 
   console.log('\n────── Summary ──────');
-  console.log(`OK    : ${ok.length}/${results.length}`);
-  if (ok.length > 0) {
-    for (const r of ok) console.log(`   ✓ ${r.id}  (${r.count}q)`);
+  console.log(`OK     : ${ok.length}`);
+  for (const r of ok) console.log(`   ✓ ${r.id}  (${r.count}q)`);
+  if (stamped.length > 0) {
+    console.log(`STAMPED: ${stamped.length}`);
+    for (const r of stamped) console.log(`   ⏱ ${r.id}`);
   }
   if (skip.length > 0) {
-    console.log(`SKIP  : ${skip.length}`);
+    console.log(`SKIP   : ${skip.length}`);
     for (const r of skip) console.log(`   - ${r.id}  ${r.reason}`);
   }
   if (fail.length > 0) {
-    console.log(`FAIL  : ${fail.length}`);
+    console.log(`FAIL   : ${fail.length}`);
     for (const r of fail) console.log(`   ✗ ${r.id}  ${r.reason.split('\n')[0]}`);
     process.exitCode = 1;
   }
