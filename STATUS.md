@@ -2,7 +2,7 @@
 
 > **Single source of truth for product state.** Read this at the start of any work session; update it before you finish. Mechanism: `CLAUDE.md` instructs every session to do so.
 >
-> **Last updated:** 2026-06-11 · **Branch:** `main` · **Tests:** 738 passing (82 files)
+> **Last updated:** 2026-06-16 · **Branch:** `main` · **Tests:** 738 passing (82 files) · **MCQ pools:** 21/21 authored
 
 ---
 
@@ -70,27 +70,27 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 
 | Module | Track | Content | MCQ pool | Learner level |
 |---|---|---|---|---|
-| M00 Baseline | A | ✓ | _generating_ | not_started |
-| M0.5 Forward pass | A | ✓ | _generating_ | not_started |
-| M01 Tokenization | A | ✓ | _generating_ | not_started |
-| M02 Embeddings | A | ✓ | _generating_ | not_started |
-| M03 Attention | A | ✓ | _generating_ | not_started |
-| M04 Transformer block | A | ✓ | _generating_ | not_started |
-| M05 Pretraining | A | ✓ | _generating_ | not_started |
-| M06 Post-training | A | ✓ | _generating_ | not_started |
-| M07 Sampling | A | ✓ | _generating_ | not_started |
-| M08 Inference (prefill/decode) | A | ✓ | _generating_ | not_started |
-| M09 KV cache | A | ✓ | _generating_ | not_started |
-| M10 GPU memory hierarchy | A | ✓ | _generating_ | not_started |
-| M11 Long context | A | ✓ | _generating_ | not_started |
-| M12 Agent memory layer | A | ✓ | _generating_ | not_started |
+| M00 Baseline | A | ✓ | ✓ | not_started |
+| M0.5 Forward pass | A | ✓ | ✓ | not_started |
+| M01 Tokenization | A | ✓ | ✓ | not_started |
+| M02 Embeddings | A | ✓ | ✓ | not_started |
+| M03 Attention | A | ✓ | ✓ | not_started |
+| M04 Transformer block | A | ✓ | ✓ | not_started |
+| M05 Pretraining | A | ✓ | ✓ | not_started |
+| M06 Post-training | A | ✓ | ✓ | not_started |
+| M07 Sampling | A | ✓ | ✓ | not_started |
+| M08 Inference (prefill/decode) | A | ✓ | ✓ | not_started |
+| M09 KV cache | A | ✓ | ✓ | not_started |
+| M10 GPU memory hierarchy | A | ✓ | ✓ | not_started |
+| M11 Long context | A | ✓ | ✓ | not_started |
+| M12 Agent memory layer | A | ✓ | ✓ | not_started |
 | B01 Eval harnesses | B | ✓ | ✓ | not_started |
 | B02 RL post-training / GRPO | B | ✓ | ✓ | not_started |
-| B03 RL environments & reward | B | ✓ | _generating_ | not_started |
-| B04 RL training infra (async) | B | ✓ | _generating_ | not_started |
-| B05 Agent architecture (FSM) | B | ✓ | _generating_ | not_started |
-| B06 Simulation infrastructure | B | ✓ | _generating_ | not_started |
-| B07 Interpretability | B | ✓ | _generating_ | not_started |
+| B03 RL environments & reward | B | ✓ | ✓ | not_started |
+| B04 RL training infra (async) | B | ✓ | ✓ | not_started |
+| B05 Agent architecture (FSM) | B | ✓ | ✓ | not_started |
+| B06 Simulation infrastructure | B | ✓ | ✓ | not_started |
+| B07 Interpretability | B | ✓ | ✓ | not_started |
 
 > Update the **MCQ pool** column to ✓ as `scripts/generate-pools.mjs` lands each pool (a pool exists when `<CURRICULUM_DIR>/mcq/<id>.json` is present).
 
@@ -98,16 +98,17 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 
 ## 5. Next pending items
 
-1. **Generate the 19 missing MCQ pools.** Until done, only B01/B02 have working `/assess`. **The blocker is rate-bucket contention, not auth** — see §6. Run `node scripts/generate-pools.mjs` when no heavy Claude Code session is competing for the subscription budget; idempotent (skips existing).
-2. **Begin v1 (BYOK LLM grading)** — the feature that makes "not yet" feedback and real `verified` promotion possible. Also sidesteps the rate-bucket problem permanently (separate API-key billing bucket).
-3. **OSS packaging** — anchor-layer split, generic curriculum, README/LICENSE/CONTRIBUTING.
+1. **Begin v1 (BYOK LLM grading)** — the feature that makes "not yet" feedback and real `verified` promotion possible. Also the durable fix for pool *regeneration* (separate API-key billing bucket; see §6 on why the OAuth script path is a dead end).
+2. **OSS packaging** — anchor-layer split, generic curriculum, README/LICENSE/CONTRIBUTING.
+
+> **MCQ pools: DONE.** All 21 modules have authored, schema-valid, stamped pools (2026-06-16). Every `/module/<id>/assess` works.
 
 ---
 
 ## 6. Gotchas / hard-won notes
 
-- **"Modules missing" = missing MCQ pools, not missing content.** All 21 modules are authored. What's absent is the auto-generated quiz pool for 19 of them.
-- **Pool-gen 429s are rate-bucket contention, NOT expired auth.** `generate-pools.mjs` uses the Claude Code subscription **OAuth** token (Keychain), which shares one output-tokens-per-minute budget with any live Claude Code session. Anthropic reserves the full `max_tokens` (8192) up front, so when a session is actively burning tokens, large generation calls 429 on the first try; a tiny call still passes. Re-auth does **not** help. Fixes: run the generator standalone when idle, or give the script an `ANTHROPIC_API_KEY` (separate bucket — and the v1 BYOK design anyway).
+- **The `generate-pools.mjs` OAuth path is a DEAD END for batch generation.** It auths with the Claude Code subscription OAuth token, which shares one rate-limit budget with any live Claude session AND expires after a few hours. A 19-pool run loses the budget fight (429 on every module) and, across backoffs, outlives the token (`OAuth token expired` mid-run). Re-auth does not help; going idle does not help. **What actually worked (2026-06-16): author the pools directly via subagents** — read each module md, write a schema-valid pool, self-validate through `node_modules/.bin/tsx scripts/pool-bridge.ts validate <file>`. This uses the harness model path (no separate rate bucket), bypassing the script entirely. The script is now only useful for `--stamp-only` / `--dry-run` (no-API) and for single-pool regen if/when an `ANTHROPIC_API_KEY` is wired in.
+- **New pool files don't surface until the CMS cache rebuilds.** `/assess` and `/studio/pools` read via the SQLite cache `<CURRICULUM_DIR>/.llmtutor-cache.sqlite`, not the file directly. A warm cache only re-checks entities it already knows — it does **not** discover newly-added per-id pool files. After adding pools out-of-band, delete `.llmtutor-cache.sqlite*` (it's derived, watcher-ignored, rebuilds cold from SoT) and reboot; cold boot scans everything.
 - **Markdown is SoT; never sed/regex-mutate notes.** Structured edits only (frontmatter round-trip; append-only for logs/cards).
 - **Dev-server cache hygiene:** after adding routes, a long-running `next dev` can desync its webpack chunk graph (`Cannot find module './XXXX.js'`). Fix = kill the server, `rm -rf .next`, restart.
 
