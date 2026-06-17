@@ -2,7 +2,7 @@
 
 > **Single source of truth for product state.** Read this at the start of any work session; update it before you finish. Mechanism: `CLAUDE.md` instructs every session to do so.
 >
-> **Last updated:** 2026-06-16 · **Branch:** `main` · **Tests:** 738 passing (82 files) · **MCQ pools:** 21/21 authored
+> **Last updated:** 2026-06-17 · **Branch:** `main` · **Tests:** 738 passing (82 files) · **MCQ pools:** 21/21 authored · **Module content:** 21/21 deepened (first-principles + diagrams)
 
 ---
 
@@ -38,6 +38,9 @@
 | 6 | Source-cascade staleness (`module_sources.stale_at` flips on content-hash change) + dashboard stale-links surface + repo homedir scrub |
 
 **Studio routes:** `/studio` (dashboard) · `/studio/sources` · `/studio/modules` · `/studio/pools` · `/studio/drafts` · `/studio/drafts/new` · `/studio/cards`.
+
+### Deep module content (Feature 1 — done 2026-06-17)
+All 21 modules rewritten from thin outlines into first-principles teaching (**~3,300–5,900 words each**, was ~400), each with ≥2 real diagrams (mermaid + ASCII) and ≥1 typed viz (heatmap / scatter / vector-table / bar-compare). Authored + independently reviewed via the `deepen-modules` subagent workflow (author → separate reviewer → repair); structurally verified via `parseModule`; rendering verified live (`/module/<id>` serves the deep prose + diagrams + visuals). Design spec: `docs/superpowers/specs/2026-06-17-deep-content-and-remediation-design.md`. **Feature 2 (pre-collected assessment remediation) is the next phase — not started.**
 
 ### Recent fixes / enhancements
 - `lazyRefresh` warm-boot bug: new entity kinds (e.g. `source`) were skipped on warm caches; now singleton files are probed every bootstrap. (`src/lib/cms/__tests__/lazy-refresh-source-probe.test.ts`)
@@ -98,10 +101,11 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 
 ## 5. Next pending items
 
-1. **Begin v1 (BYOK LLM grading)** — the feature that makes "not yet" feedback and real `verified` promotion possible. Also the durable fix for pool *regeneration* (separate API-key billing bucket; see §6 on why the OAuth script path is a dead end).
-2. **OSS packaging** — anchor-layer split, generic curriculum, README/LICENSE/CONTRIBUTING.
+1. **Feature 2 — pre-collected assessment remediation** (next up; spec written). Per-question `remediation` block (static deepDive + module-section deep-links + seeAlso), reader heading-slugs for deep-linking, `McqFeedback` result UI, schema/validator/loadPool extension (TDD). Sequenced after content depth, which is now done.
+2. **v1 (BYOK LLM grading)** — "not yet" feedback + real `verified` promotion (also the durable fix for pool *regeneration*: separate API-key billing bucket; see §6).
+3. **OSS packaging** — anchor-layer split, generic curriculum, README/LICENSE/CONTRIBUTING.
 
-> **MCQ pools: DONE.** All 21 modules have authored, schema-valid, stamped pools (2026-06-16). Every `/module/<id>/assess` works.
+> **MCQ pools: DONE** (21/21 authored, validated, stamped). **Module content: DONE** (21/21 deepened, reviewed, rendering verified).
 
 ---
 
@@ -110,7 +114,9 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 - **The `generate-pools.mjs` OAuth path is a DEAD END for batch generation.** It auths with the Claude Code subscription OAuth token, which shares one rate-limit budget with any live Claude session AND expires after a few hours. A 19-pool run loses the budget fight (429 on every module) and, across backoffs, outlives the token (`OAuth token expired` mid-run). Re-auth does not help; going idle does not help. **What actually worked (2026-06-16): author the pools directly via subagents** — read each module md, write a schema-valid pool, self-validate through `node_modules/.bin/tsx scripts/pool-bridge.ts validate <file>`. This uses the harness model path (no separate rate bucket), bypassing the script entirely. The script is now only useful for `--stamp-only` / `--dry-run` (no-API) and for single-pool regen if/when an `ANTHROPIC_API_KEY` is wired in.
 - **New pool files don't surface until the CMS cache rebuilds.** `/assess` and `/studio/pools` read via the SQLite cache `<CURRICULUM_DIR>/.llmtutor-cache.sqlite`, not the file directly. A warm cache only re-checks entities it already knows — it does **not** discover newly-added per-id pool files. After adding pools out-of-band, delete `.llmtutor-cache.sqlite*` (it's derived, watcher-ignored, rebuilds cold from SoT) and reboot; cold boot scans everything.
 - **Markdown is SoT; never sed/regex-mutate notes.** Structured edits only (frontmatter round-trip; append-only for logs/cards).
-- **Dev-server cache hygiene:** after adding routes, a long-running `next dev` can desync its webpack chunk graph (`Cannot find module './XXXX.js'`). Fix = kill the server, `rm -rf .next`, restart.
+- **Dev-server cache hygiene:** after adding routes, a long-running `next dev` can desync its webpack chunk graph (`Cannot find module './XXXX.js'`). Fix = kill the server, `rm -rf .next`, restart. Also: editing module/pool files on disk requires a cache rebuild (`rm .llmtutor-cache.sqlite*` + restart) before the reader/Studio show the change.
+- **`pool-bridge.ts parse` emits a 9-field SUMMARY** (`id, track, name, primarySources, anchors, whyThisMatters, engineerPass, operatorPass, sources`), NOT the full `Module`. To verify `diagrams`/`visuals`/`drills`/`stressTests` counts, import `parseModule` directly (e.g. a throwaway `tsx` script), don't grep the bridge output.
+- **Deepening all modules left every pool's `sourceHash` stale** (the pools were authored against the concepts, which didn't change — only the prose got deeper). A default `node scripts/generate-pools.mjs` would now mark all non-reference pools "regenerate". DON'T — the pools are correct; pools are authored via subagents, not that (dead OAuth) script.
 
 ---
 
