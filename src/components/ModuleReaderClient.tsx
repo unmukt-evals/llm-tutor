@@ -9,8 +9,9 @@
 // DiagramPane below the body.
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeSlug from 'rehype-slug';
 import DepthToggle from '@/components/DepthToggle';
 import DiagramPane from '@/components/DiagramPane';
 import VizBlock from '@/components/viz/VizBlock';
@@ -30,6 +31,27 @@ interface ModuleReaderClientProps {
 export default function ModuleReaderClient({ module, state }: ModuleReaderClientProps) {
   const [depth, setDepth] = useState<DepthPass>(DEFAULT_DEPTH);
 
+  // Deep-link support (Feature 2): an assessment "re-learn" link arrives as
+  // /module/<id>?pass=<pass>#<heading-slug>. Select the requested pass on mount.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('pass');
+    const valid: DepthPass[] = ['tenYearOld', 'engineer', 'operator'];
+    if (p && (valid as string[]).includes(p) && resolvePass(module, p as DepthPass).authored) {
+      setDepth(p as DepthPass);
+    }
+  }, [module]);
+
+  // After the chosen pass renders (rehype-slug has assigned heading ids), scroll
+  // to the linked heading. Re-runs when depth changes so the target is mounted.
+  useEffect(() => {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (!hash) return;
+    const t = setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [depth]);
+
   // Which passes are authored — drives DepthToggle's dimming + the body state.
   const availability: Partial<Record<DepthPass, boolean>> = Object.fromEntries(
     DEPTH_OPTIONS.map(({ key }) => [key, resolvePass(module, key).authored]),
@@ -43,7 +65,7 @@ export default function ModuleReaderClient({ module, state }: ModuleReaderClient
 
       {resolved.authored && resolved.content ? (
         <article className="prose prose-slate max-w-none">
-          <ReactMarkdown>{resolved.content}</ReactMarkdown>
+          <ReactMarkdown rehypePlugins={[rehypeSlug]}>{resolved.content}</ReactMarkdown>
         </article>
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-4 text-sm italic text-slate-500">
