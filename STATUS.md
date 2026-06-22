@@ -2,7 +2,7 @@
 
 > **Single source of truth for product state.** Read this at the start of any work session; update it before you finish. Mechanism: `CLAUDE.md` instructs every session to do so.
 >
-> **Last updated:** 2026-06-22 · **Branch:** `main` · **Tests:** 749 passing (84 files) · **MCQ pools:** 21/21 authored · **Module content:** 21/21 deepened · **Remediation (Feature 2):** shipped; 283/283 questions; independent review passed (0 blocker/0 major), minors fixed; confirmation re-review pending session-limit reset
+> **Last updated:** 2026-06-22 · **Branch:** `main` · **Tests:** 749 passing (84 files) · **MCQ pools:** 21/21 authored · **Module content:** 21/21 deepened · **Remediation (Feature 2):** shipped + independently reviewed (0 blocker/0 major; minors fixed & confirmed); 283/283 questions
 
 ---
 
@@ -48,7 +48,7 @@ After answering an MCQ, `McqFeedback` shows a deeper explanation + "Re-learn in 
 - **Cache fix (was a real bug):** the SQLite cache (`cms.getPool`, the `/assess` read path) stored questions in fixed columns and silently dropped remediation. Migration `003` + indexer write/read now persist it. Round-trip test guards it.
 - **UI + deep-links:** `McqFeedback` renders the block; reader gained `rehype-slug` heading ids + `?pass=`/`#anchor` handling (`moduleRefHref` helper, github-slugger matches rehype-slug). Deep-links are **pass-level by default** (open the right depth pass); 2 modules (B05, M10) demonstrate `####`-heading anchors — all 19 verified-resolving.
 - **Content:** all 21 pools, **283/283 questions** have a `deepDive` + `moduleRefs` (authored + independently reviewed via the `remediate-pools` workflow).
-- **Quality:** the independent `feature2-final-review` workflow returned **0 blockers, 0 majors, 20 minors**; all 14 concrete content minors fixed via the `feature2-fix-minors` workflow and re-validated. A **confirmation re-review is pending** — it keeps hitting the account session-limit window (see §6); re-run when the window clears.
+- **Quality:** the independent `feature2-final-review` workflow (7 cold auditors over code + all 21 modules/pools) returned **0 blockers, 0 majors, 20 minors**; all 14 concrete content minors fixed via `feature2-fix-minors` and re-validated. A fresh independent confirmation reviewer (single comprehensive cold pass — the 7-agent burst kept tripping the session cap) then re-verified the code, the assess data-flow, and every fix: **PASS, 0 findings.**
 - **Design decisions (not gaps):** no React render tests (repo convention — logic is unit-tested); deep-links pass-level not universal-anchor (anchors need `####` sub-headings, and `###` would truncate a pass in the parser); cache does not persist `generatedAt`/`sourceHash` (`loadPool` does — out of scope).
 
 ### Recent fixes / enhancements
