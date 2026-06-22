@@ -477,8 +477,9 @@ function writePool(
     const ins = db.prepare(
       `INSERT INTO mcq_questions(id, module_id, ord, difficulty, dimension, stem,
                                  options_json, correct_index,
-                                 distractor_misconceptions_json, explanation, source_ref)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                                 distractor_misconceptions_json, explanation, source_ref,
+                                 remediation_json)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     );
     // Mirror FileMCQRepository.loadPool: normalize the moduleId onto every q.
     parsed.questions.forEach((q, i) =>
@@ -494,6 +495,7 @@ function writePool(
         JSON.stringify(q.distractorMisconception),
         q.explanation,
         q.sourceRef ?? null,
+        q.remediation ? JSON.stringify(q.remediation) : null,
       ),
     );
 
@@ -523,7 +525,8 @@ export function selectPool(db: BSDatabase, id: string): MCQPool | null {
   const rows = db
     .prepare(
       `SELECT id, module_id, difficulty, dimension, stem, options_json,
-              correct_index, distractor_misconceptions_json, explanation, source_ref
+              correct_index, distractor_misconceptions_json, explanation, source_ref,
+              remediation_json
        FROM mcq_questions WHERE module_id = ? ORDER BY ord`,
     )
     .all(id) as Array<{
@@ -537,6 +540,7 @@ export function selectPool(db: BSDatabase, id: string): MCQPool | null {
     distractor_misconceptions_json: string;
     explanation: string;
     source_ref: string | null;
+    remediation_json: string | null;
   }>;
 
   return {
@@ -554,6 +558,7 @@ export function selectPool(db: BSDatabase, id: string): MCQPool | null {
         explanation: r.explanation,
       };
       if (r.source_ref !== null) q.sourceRef = r.source_ref;
+      if (r.remediation_json !== null) q.remediation = JSON.parse(r.remediation_json);
       return q;
     }),
   };

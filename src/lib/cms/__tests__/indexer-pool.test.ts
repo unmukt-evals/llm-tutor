@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { readFile, writeFile, mkdtemp, mkdir } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { getDb, runMigrations } from '@/lib/cms/db';
 import { indexEntity, selectPool } from '@/lib/cms/indexer';
 import { validatePool } from '@/lib/mcq/repository';
@@ -40,6 +41,42 @@ describe("indexEntity('pool', 'B01')", () => {
       .prepare("SELECT content_hash FROM index_rows WHERE kind='pool' AND entity_id='B01'")
       .get() as { content_hash: string } | undefined;
     expect(row?.content_hash).toMatch(/^[0-9a-f]{64}$/);
+    db.close();
+  });
+
+  it('preserves question remediation through the cache round-trip', async () => {
+    const db = getDb(':memory:');
+    runMigrations(db);
+    const dir = await mkdtemp(join(tmpdir(), 'rem-pool-'));
+    await mkdir(join(dir, 'mcq'), { recursive: true });
+    const remediation = {
+      deepDive: 'A deeper explanation of the mechanism.',
+      moduleRefs: [{ pass: 'engineer', anchor: 'Why it works', label: 'Re-learn: why it works' }],
+      seeAlso: ['M02 embeddings'],
+    };
+    const pool = {
+      moduleId: 'REM',
+      questions: [
+        {
+          id: 'REM-q1',
+          moduleId: 'REM',
+          difficulty: 'easy',
+          dimension: 'topic',
+          stem: 'stem?',
+          options: ['a', 'b', 'c', 'd'],
+          correctIndex: 0,
+          distractorMisconception: { '1': 'x', '2': 'y', '3': 'z' },
+          explanation: 'because.',
+          remediation,
+        },
+      ],
+    };
+    await writeFile(join(dir, 'mcq', 'REM.json'), JSON.stringify(pool));
+
+    await indexEntity(db, dir, 'pool', 'REM');
+    const got = selectPool(db, 'REM');
+
+    expect(got!.questions[0].remediation).toEqual(remediation);
     db.close();
   });
 

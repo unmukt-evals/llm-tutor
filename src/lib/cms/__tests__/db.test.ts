@@ -38,7 +38,11 @@ describe('cms/db', () => {
     const applied = db
       .prepare('SELECT name FROM _schema_migrations ORDER BY name')
       .all() as { name: string }[];
-    expect(applied.map((r) => r.name)).toEqual(['001_initial.sql', '002_sources_meta.sql']);
+    expect(applied.map((r) => r.name)).toEqual([
+      '001_initial.sql',
+      '002_sources_meta.sql',
+      '003_question_remediation.sql',
+    ]);
 
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
@@ -73,8 +77,8 @@ describe('cms/db', () => {
     runMigrations(db);
     const after = (db.prepare('SELECT COUNT(*) AS n FROM _schema_migrations').get() as { n: number }).n;
     expect(after).toBe(before);
-    // 001_initial.sql + 002_sources_meta.sql
-    expect(after).toBe(2);
+    // 001_initial.sql + 002_sources_meta.sql + 003_question_remediation.sql
+    expect(after).toBe(3);
     db.close();
   });
 
