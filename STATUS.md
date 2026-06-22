@@ -2,7 +2,7 @@
 
 > **Single source of truth for product state.** Read this at the start of any work session; update it before you finish. Mechanism: `CLAUDE.md` instructs every session to do so.
 >
-> **Last updated:** 2026-06-17 · **Branch:** `main` · **Tests:** 738 passing (82 files) · **MCQ pools:** 21/21 authored · **Module content:** 21/21 deepened (first-principles + diagrams)
+> **Last updated:** 2026-06-22 · **Branch:** `main` · **Tests:** 749 passing (84 files) · **MCQ pools:** 21/21 authored · **Module content:** 21/21 deepened · **Remediation (Feature 2):** shipped; 283/283 questions; independent review passed (0 blocker/0 major), minors fixed; confirmation re-review pending session-limit reset
 
 ---
 
@@ -40,7 +40,16 @@
 **Studio routes:** `/studio` (dashboard) · `/studio/sources` · `/studio/modules` · `/studio/pools` · `/studio/drafts` · `/studio/drafts/new` · `/studio/cards`.
 
 ### Deep module content (Feature 1 — done 2026-06-17)
-All 21 modules rewritten from thin outlines into first-principles teaching (**~3,300–5,900 words each**, was ~400), each with ≥2 real diagrams (mermaid + ASCII) and ≥1 typed viz (heatmap / scatter / vector-table / bar-compare). Authored + independently reviewed via the `deepen-modules` subagent workflow (author → separate reviewer → repair); structurally verified via `parseModule`; rendering verified live (`/module/<id>` serves the deep prose + diagrams + visuals). Design spec: `docs/superpowers/specs/2026-06-17-deep-content-and-remediation-design.md`. **Feature 2 (pre-collected assessment remediation) is the next phase — not started.**
+All 21 modules rewritten from thin outlines into first-principles teaching (**~3,300–5,900 words each**, was ~400), each with ≥2 real diagrams (mermaid + ASCII) and ≥1 typed viz (heatmap / scatter / vector-table / bar-compare). Authored + independently reviewed via the `deepen-modules` subagent workflow (author → separate reviewer → repair); structurally verified via `parseModule`; rendering verified live (`/module/<id>` serves the deep prose + diagrams + visuals). Design spec: `docs/superpowers/specs/2026-06-17-deep-content-and-remediation-design.md`.
+
+### Pre-collected assessment remediation (Feature 2 — shipped 2026-06-22)
+After answering an MCQ, `McqFeedback` shows a deeper explanation + "Re-learn in the module" deep-links + see-also — all static/pre-collected, no LLM at answer time.
+- **Schema:** `MCQQuestion.remediation` (`deepDive` + `moduleRefs[{pass,anchor?,label}]` + `seeAlso`), optional/back-compat; `validatePool` validates it; `loadPool` preserves it.
+- **Cache fix (was a real bug):** the SQLite cache (`cms.getPool`, the `/assess` read path) stored questions in fixed columns and silently dropped remediation. Migration `003` + indexer write/read now persist it. Round-trip test guards it.
+- **UI + deep-links:** `McqFeedback` renders the block; reader gained `rehype-slug` heading ids + `?pass=`/`#anchor` handling (`moduleRefHref` helper, github-slugger matches rehype-slug). Deep-links are **pass-level by default** (open the right depth pass); 2 modules (B05, M10) demonstrate `####`-heading anchors — all 19 verified-resolving.
+- **Content:** all 21 pools, **283/283 questions** have a `deepDive` + `moduleRefs` (authored + independently reviewed via the `remediate-pools` workflow).
+- **Quality:** the independent `feature2-final-review` workflow returned **0 blockers, 0 majors, 20 minors**; all 14 concrete content minors fixed via the `feature2-fix-minors` workflow and re-validated. A **confirmation re-review is pending** — it keeps hitting the account session-limit window (see §6); re-run when the window clears.
+- **Design decisions (not gaps):** no React render tests (repo convention — logic is unit-tested); deep-links pass-level not universal-anchor (anchors need `####` sub-headings, and `###` would truncate a pass in the parser); cache does not persist `generatedAt`/`sourceHash` (`loadPool` does — out of scope).
 
 ### Recent fixes / enhancements
 - `lazyRefresh` warm-boot bug: new entity kinds (e.g. `source`) were skipped on warm caches; now singleton files are probed every bootstrap. (`src/lib/cms/__tests__/lazy-refresh-source-probe.test.ts`)
@@ -117,6 +126,7 @@ Content authored for all 21. Learner level is `not_started` for all (the app is 
 - **Dev-server cache hygiene:** after adding routes, a long-running `next dev` can desync its webpack chunk graph (`Cannot find module './XXXX.js'`). Fix = kill the server, `rm -rf .next`, restart. Also: editing module/pool files on disk requires a cache rebuild (`rm .llmtutor-cache.sqlite*` + restart) before the reader/Studio show the change.
 - **`pool-bridge.ts parse` emits a 9-field SUMMARY** (`id, track, name, primarySources, anchors, whyThisMatters, engineerPass, operatorPass, sources`), NOT the full `Module`. To verify `diagrams`/`visuals`/`drills`/`stressTests` counts, import `parseModule` directly (e.g. a throwaway `tsx` script), don't grep the bridge output.
 - **Deepening all modules left every pool's `sourceHash` stale** (the pools were authored against the concepts, which didn't change — only the prose got deeper). A default `node scripts/generate-pools.mjs` would now mark all non-reference pools "regenerate". DON'T — the pools are correct; pools are authored via subagents, not that (dead OAuth) script.
+- **Heavy multi-agent workflows trip the account session-limit window.** A burst of ~7+ concurrent subagents (and the bigger 21+21 content/review fans) can fail instantly with "You've hit your session limit · resets <time>". The window resets on a rolling cap; the *main loop* keeps working (smaller turns), only the agent bursts fail. Re-run the workflow after the window clears (the workflow is idempotent / resumable via `resumeFromRunId`). This blocked the remediation fan-out once and the final confirmation re-review — both just need a re-run post-reset.
 
 ---
 
