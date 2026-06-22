@@ -17,7 +17,14 @@
         "3": "confuses eval with cost"
       },
       "explanation": "An eval measures a capability under test.",
-      "sourceRef": "S1"
+      "sourceRef": "S1",
+      "remediation": {
+        "deepDive": "An eval is an instrument: it isolates one capability and scores it under controlled conditions, so a score change reflects the capability, not noise.",
+        "moduleRefs": [
+          { "pass": "engineer", "anchor": "what-an-eval-measures", "label": "Re-learn: what an eval measures" }
+        ],
+        "seeAlso": ["fairness", "failure attribution"]
+      }
     },
     {
       "id": "B99-e-logic",

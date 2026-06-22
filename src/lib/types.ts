@@ -128,6 +128,19 @@ export interface CurriculumRepository {
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type Dimension = 'topic' | 'logic' | 'example' | 'extension';
 
+/** A deep-link from an assessment question back into its module's reader. */
+export interface ModuleRef {
+  pass: DepthPass; // which depth pass to open
+  anchor?: string; // heading slug within that pass to scroll to
+  label: string; // link text, e.g. "Re-learn: attention-mass dilution"
+}
+/** Pre-collected remediation surfaced after a question is answered (Feature 2). */
+export interface QuestionRemediation {
+  deepDive: string; // a deeper explanation beyond the one-line `explanation`
+  moduleRefs?: ModuleRef[]; // "go re-learn this" deep-links into the module
+  seeAlso?: string[]; // related concepts / pointers
+}
+
 export interface MCQQuestion {
   id: string; // "B01-q014"
   moduleId: string;
@@ -140,6 +153,7 @@ export interface MCQQuestion {
   explanation: string;
   sourceRef?: string; // "S4"
   source_id?: string; // typed link into sources.id; populated when known
+  remediation?: QuestionRemediation; // Feature 2: pre-collected post-answer remediation (optional)
 }
 export interface MCQPool {
   moduleId: string;

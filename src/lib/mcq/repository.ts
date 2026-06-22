@@ -6,10 +6,12 @@ import type {
   MCQRepository,
   Difficulty,
   Dimension,
+  DepthPass,
 } from '@/lib/types';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
 const DIMENSIONS: Dimension[] = ['topic', 'logic', 'example', 'extension'];
+const DEPTH_PASSES: DepthPass[] = ['tenYearOld', 'engineer', 'operator'];
 
 /**
  * Pure validator. Throws an Error with a human-readable message if the pool is
@@ -86,6 +88,45 @@ export function validatePool(pool: unknown): MCQPool {
           ',',
         )}]`,
       );
+    }
+
+    // Feature 2: optional remediation block. Back-compat — absent is fine.
+    const rem = q.remediation;
+    if (rem !== undefined) {
+      if (!rem || typeof rem !== 'object' || Array.isArray(rem)) {
+        throw new Error(`question ${id} remediation must be an object`);
+      }
+      const r = rem as Record<string, unknown>;
+      if (typeof r.deepDive !== 'string' || r.deepDive.length === 0) {
+        throw new Error(`question ${id} remediation.deepDive must be a non-empty string`);
+      }
+      if (r.moduleRefs !== undefined) {
+        if (!Array.isArray(r.moduleRefs)) {
+          throw new Error(`question ${id} remediation.moduleRefs must be an array`);
+        }
+        for (const ref of r.moduleRefs) {
+          if (!ref || typeof ref !== 'object' || Array.isArray(ref)) {
+            throw new Error(`question ${id} remediation.moduleRefs[] entries must be objects`);
+          }
+          const rr = ref as Record<string, unknown>;
+          if (!DEPTH_PASSES.includes(rr.pass as DepthPass)) {
+            throw new Error(
+              `question ${id} remediation.moduleRefs[].pass must be one of ${DEPTH_PASSES.join('|')}`,
+            );
+          }
+          if (typeof rr.label !== 'string' || rr.label.length === 0) {
+            throw new Error(`question ${id} remediation.moduleRefs[].label must be a non-empty string`);
+          }
+          if (rr.anchor !== undefined && typeof rr.anchor !== 'string') {
+            throw new Error(`question ${id} remediation.moduleRefs[].anchor must be a string`);
+          }
+        }
+      }
+      if (r.seeAlso !== undefined) {
+        if (!Array.isArray(r.seeAlso) || !r.seeAlso.every((s) => typeof s === 'string')) {
+          throw new Error(`question ${id} remediation.seeAlso must be a string[]`);
+        }
+      }
     }
   }
 

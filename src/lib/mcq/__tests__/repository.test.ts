@@ -40,6 +40,15 @@ describe('FileMCQRepository.loadPool', () => {
     const repo = new FileMCQRepository(FIXTURE_DIR, () => 'bad-pool.json');
     await expect(repo.loadPool('whatever')).rejects.toThrow(/exactly 4 options/i);
   });
+
+  it('preserves question remediation through load', async () => {
+    const repo = new FileMCQRepository(FIXTURE_DIR, fixtureNamer);
+    const pool = await repo.loadPool('B99');
+    const q = pool!.questions.find((x) => x.remediation);
+    expect(q, 'fixture should carry a question with remediation').toBeDefined();
+    expect(q!.remediation!.deepDive.length).toBeGreaterThan(0);
+    expect(q!.remediation!.moduleRefs?.[0]?.pass).toBeTruthy();
+  });
 });
 
 describe('getMcqRepository factory', () => {
@@ -69,6 +78,38 @@ describe('validatePool', () => {
 
   it('rejects a non-string sourceHash when present', () => {
     expect(() => validatePool({ ...B99_POOL, sourceHash: {} } as unknown)).toThrow(/sourceHash/i);
+  });
+
+  const withRem = (rem: unknown) => ({
+    ...B99_POOL,
+    questions: [{ ...B99_POOL.questions[0], remediation: rem }, ...B99_POOL.questions.slice(1)],
+  });
+  it('accepts a valid remediation block', () => {
+    expect(() =>
+      validatePool(
+        withRem({
+          deepDive: 'A deeper explanation of the concept.',
+          moduleRefs: [{ pass: 'engineer', anchor: 'dilution', label: 'Re-learn: dilution' }],
+          seeAlso: ['M02 embeddings'],
+        }),
+      ),
+    ).not.toThrow();
+  });
+  it('rejects an empty remediation.deepDive', () => {
+    expect(() => validatePool(withRem({ deepDive: '' }))).toThrow(/deepDive/i);
+  });
+  it('rejects a remediation moduleRef with an invalid pass', () => {
+    expect(() =>
+      validatePool(withRem({ deepDive: 'x', moduleRefs: [{ pass: 'wizard', label: 'go' }] })),
+    ).toThrow(/pass/i);
+  });
+  it('rejects a remediation moduleRef missing a label', () => {
+    expect(() =>
+      validatePool(withRem({ deepDive: 'x', moduleRefs: [{ pass: 'engineer' }] })),
+    ).toThrow(/label/i);
+  });
+  it('rejects non-array remediation.seeAlso', () => {
+    expect(() => validatePool(withRem({ deepDive: 'x', seeAlso: 'nope' }))).toThrow(/seeAlso/i);
   });
 
   it.each([
